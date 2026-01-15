@@ -80,9 +80,11 @@ async function uploadFiles() {
         return;
     }
 
-    statusDiv.textContent = 'Processing...';
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '🕒 Đang xử lý... Vui lòng đợi trong giây lát (khoảng 10-30s)...';
     statusDiv.className = 'status processing';
     uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '⏳ Processing...';
 
     const formData = new FormData();
     const reportTitle = document.getElementById('reportTitle').value;
@@ -120,19 +122,20 @@ async function uploadFiles() {
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
-            statusDiv.innerHTML = 'Done! Report downloaded.';
+            statusDiv.innerHTML = '✅ Tạo báo cáo thành công! Tải xuống đang bắt đầu.';
             statusDiv.className = 'status success';
         } else {
             const errorText = await response.text();
-            statusDiv.textContent = 'Error: ' + errorText;
+            statusDiv.innerHTML = '❌ Lỗi server: ' + errorText;
             statusDiv.className = 'status error';
         }
     } catch (error) {
         console.error(error);
-        statusDiv.textContent = 'An error occurred during upload.';
+        statusDiv.innerHTML = '❌ Lỗi kết nối: Không thể gửi yêu cầu lên server.';
         statusDiv.className = 'status error';
     } finally {
         uploadBtn.disabled = false;
+        uploadBtn.innerHTML = 'Generate PV Report'; // Reset text
         uploadBtn.filesToUpload = null; // Reset
     }
 }
