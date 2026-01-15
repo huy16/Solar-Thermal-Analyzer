@@ -1,0 +1,273 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --text-main: #1f2937;
+    --text-secondary: #6b7280;
+    --success-color: #10b981;
+    --error-color: #ef4444;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #eef2f6;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-main);
+    overflow: hidden;
+    position: relative;
+}
+
+.background-animation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(79, 70, 229, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 70, 229, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+}
+
+.logo-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: -25px;
+    gap: 15px;
+}
+
+.app-logo {
+    max-height: 120px;
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 0;
+}
+
+
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-top: -30px;
+    margin-bottom: 0.2rem;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+}
+
+.footer-brand {
+    margin-top: 2rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+p.subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.upload-area {
+    border: 3px dashed #e5e7eb;
+    border-radius: 16px;
+    padding: 3rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafafa;
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-area:hover,
+.upload-area.highlight {
+    border-color: var(--primary-color);
+    background: #eef2ff;
+    transform: scale(1.01);
+}
+
+.upload-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    transition: transform 0.3s ease;
+}
+
+.upload-area:hover .upload-icon {
+    transform: translateY(-5px) scale(1.1);
+    opacity: 1;
+}
+
+.upload-hint {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.upload-subhint {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.file-input {
+    display: none;
+}
+
+#status {
+    margin-top: 1.5rem;
+    font-weight: 600;
+    min-height: 24px;
+    transition: color 0.3s;
+}
+
+#file-list {
+    margin-top: 1.5rem;
+    text-align: left;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#file-list ul {
+    list-style: none;
+}
+
+#file-list li {
+    background: #f3f4f6;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.button {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background 0.3s;
+    display: none;
+    /* Only show when files selected */
+}
+
+.button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.remark-input {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    width: 250px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.remark-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.file-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+}
+
+.file-name::before {
+    content: "📄";
+    margin-right: 8px;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+    }
+}
+
+.upload-area.highlight {
+    animation: pulse 1.5s infinite;
+}
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, .3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

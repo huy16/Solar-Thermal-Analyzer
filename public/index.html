@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testo Thermal Processor</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Inline SVG definitions or simple icons could go here, relying on CSS img for now -->
+</head>
+
+<body>
+    <div class="background-animation"></div>
+    <div class="container">
+        <div class="card">
+            <div class="logo-header">
+                <img src="assets/cas_full_logo.png" alt="CAS Engineering Logo" class="app-logo">
+            </div>
+
+            <h1>Solar Thermal Analyzer</h1>
+            <p class="subtitle">CAS Engineering • PV System Inspection Tool</p>
+
+            <div style="margin-bottom: 1.5rem; text-align: left;">
+                <label for="reportTitle"
+                    style="font-weight: 600; display: block; margin-bottom: 0.5rem; color: #374151;">Project / Report
+                    Title</label>
+                <input type="text" id="reportTitle" placeholder="e.g. Solar Farm Inspection - Zone A"
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.3s;"
+                    onfocus="this.style.borderColor='#4f46e5'" onblur="this.style.borderColor='#e5e7eb'">
+            </div>
+
+            <div class="upload-area" id="drop-area">
+                <!-- Upload Icon -->
+                <svg class="upload-icon" fill="none" class="w-12 h-12" stroke="#4f46e5" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                    </path>
+                </svg>
+
+                <div class="upload-hint">Drag & Drop .BMT files</div>
+                <div class="upload-subhint">Rapid processing for Solar PV Reports</div>
+
+                <input type="file" id="fileElem" multiple accept=".BMT" class="file-input"
+                    onchange="handleFiles(this.files)">
+            </div>
+
+            <div id="file-list"></div>
+            <button id="uploadBtn" class="button">Generate PV Report</button>
+            <div id="status"></div>
+
+            <div class="footer-brand">Powered by CAS Engineering</div>
+        </div>
+    </div>
+    <script src="script.js?v=3"></script>
+</body>
+
+</html>
