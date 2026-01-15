@@ -5,10 +5,22 @@ const IReportService = require('../../domain/repositories/IReportService');
 
 class PuppeteerReportService extends IReportService {
     async generate(dataList, outputPath, reportTitle = "BÁO CÁO KẾT QUẢ KIỂM TRA NHIỆT") {
-        const browser = await puppeteer.launch({
-            headless: "new",
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        let browser;
+        try {
+            browser = await puppeteer.launch({
+                headless: "new",
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--single-process',
+                    '--no-zygote'
+                ]
+            });
+        } catch (err) {
+            console.error("PUPPETEER LAUNCH ERROR:", err);
+            throw new Error("Không thể chạy trình duyệt in PDF trên Server. Lỗi: " + err.message);
+        }
         const page = await browser.newPage();
 
         let logoBase64 = null;
