@@ -26,7 +26,7 @@ class PuppeteerReportService extends IReportService {
 
         let logoBase64 = null;
         try {
-            const logoPath = path.join(__dirname, '../../../public/assets/logo.png');
+            const logoPath = path.join(__dirname, '../../../public/assets/cps_logo.png');
             if (fs.existsSync(logoPath)) {
                 logoBase64 = fs.readFileSync(logoPath).toString('base64');
             }
