@@ -588,7 +588,7 @@ class PuppeteerReportService extends IReportService {
 
         html += `</body></html>`;
 
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60000 });
+        await page.setContent(html, { waitUntil: 'load', timeout: 90000 });
         await page.pdf({ path: outputPath, format: 'A4', printBackground: true });
         await browser.close();
         return outputPath;
