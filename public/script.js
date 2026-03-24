@@ -86,8 +86,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Toast notification
 function showToast(message) {
     const toast = document.getElementById('toast');
-    if (!toast) return;
-    toast.textContent = message;
+    const toastMsg = document.getElementById('toast-msg');
+    if (!toast || !toastMsg) return;
+    toastMsg.textContent = message;
     toast.classList.add('show');
     setTimeout(() => {
         toast.classList.remove('show');
@@ -195,8 +196,8 @@ async function uploadFiles() {
     // Generate the report with or without BMT files
 
     
-    statusDiv.style.display = 'block';
-    statusDiv.innerHTML = '🕒 Đang xử lý... Vui lòng đợi trong giây lát...';
+    statusDiv.style.display = 'flex';
+    statusDiv.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span> <span>Đang xử lý... Vui lòng đợi trong giây lát...</span>';
     statusDiv.className = 'status processing';
     uploadBtn.disabled = true;
     uploadBtn.innerHTML = '⏳ Processing...';
@@ -262,16 +263,16 @@ async function uploadFiles() {
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
-            statusDiv.innerHTML = '✅ Tạo báo cáo thành công! Tải xuống đang bắt đầu.';
+            statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> <span>Tạo báo cáo thành công! Tải xuống đang bắt đầu.</span>';
             statusDiv.className = 'status success';
         } else {
             const errorText = await response.text();
-            statusDiv.innerHTML = '❌ Lỗi server: ' + errorText;
+            statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi server: ' + errorText + '</span>';
             statusDiv.className = 'status error';
         }
     } catch (error) {
         console.error(error);
-        statusDiv.innerHTML = '❌ Lỗi kết nối: Không thể gửi yêu cầu lên server.';
+        statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi kết nối: Không thể gửi yêu cầu lên server.</span>';
         statusDiv.className = 'status error';
     } finally {
         uploadBtn.disabled = false;
