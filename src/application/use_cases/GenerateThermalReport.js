@@ -29,7 +29,10 @@ class GenerateThermalReport {
 
                 // Only override if a specific manual category is provided (not the default 'device')
                 if (manualCategory && manualCategory !== "device") {
-                    thermalImage.deviceType = manualCategory;
+                    let mappedType = manualCategory;
+                    if (manualCategory === "pv") mappedType = "solar_panel";
+                    if (manualCategory === "ac") mappedType = "cabinet";
+                    thermalImage.deviceType = mappedType;
                 }
                 const deviceType = thermalImage.deviceType;
 
@@ -47,6 +50,10 @@ class GenerateThermalReport {
                     } else {
                         thermalImage.severity = "Normal";
                     }
+                    // Populate spot statuses for the report table
+                    thermalImage.hs1Status = thermalImage.severity;
+                    thermalImage.cs1Status = "Normal";
+                    thermalImage.m1Status = "Normal";
 
                     // Auto-generate Conclusion & Recommendation if empty (Vietnamese)
                     if (!thermalImage.conclusion) {

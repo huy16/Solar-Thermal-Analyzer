@@ -8,33 +8,33 @@ class DeviceClassifier {
     static CATEGORIES = {
         solar_panel: {
             keywords: ['pv', 'panel', 'solar', 'module', 'string', 'cell'],
-            label: '🔆 PV Panel',
+            label: 'Hệ thống tấm pin năng lượng mặt trời / PV Panel System',
             sortOrder: 1,
             thresholds: { warning: 45, critical: 65 }
         },
         cable: {
-            keywords: ['cable', 'ac', 'dc', 'wire', 'connector', 'junction', 'cb', 'dây', 'cap'],
-            label: '🔌 AC/DC Cable',
-            sortOrder: 2,
+            keywords: ['cable', 'dc', 'wire', 'connector', 'junction', 'cb', 'dây', 'cap'],
+            label: 'Đấu nối cáp & Thiết bị / Cable & Equipment Connections',
+            sortOrder: 4,
             thresholds: { warning: 70, critical: 90 }
         },
         cabinet: {
-            keywords: ['cabinet', 'combiner', 'box', 'mdb', 'db', 'acb', 'tá»§', 'dc combiner'],
-            label: '🗄️ Tá»§ Ä‘iá»‡n / AC Cabinet',
-            sortOrder: 3,
+            keywords: ['cabinet', 'combiner', 'box', 'mdb', 'db', 'acb', 'tủ', 'dc combiner', 'ac'],
+            label: 'Tủ AC Solar / Solar AC Cabinet',
+            sortOrder: 2,
             thresholds: { warning: 60, critical: 80 }
         },
         inverter: {
-            keywords: ['inverter', 'biáº¿n táº§n', 'inv'],
-            label: '🔄 Inverter / Biáº¿n táº§n',
-            sortOrder: 4,
+            keywords: ['inverter', 'biến tần', 'inv'],
+            label: 'Biến tần / Inverter',
+            sortOrder: 3,
             thresholds: { warning: 60, critical: 80 }
         },
         device: {
-            keywords: ['device', 'thiáº¿t bá»‹', 'other', 'khÃ¡c'],
-            label: '🔧 Thiáº¿t bá»‹',
+            keywords: ['device', 'thiết bị', 'other', 'khác'],
+            label: 'Thiết bị khác / Other Devices',
             sortOrder: 5,
-            thresholds: { warning: 50, critical: 70 } // Generic middle-ground thresholds
+            thresholds: { warning: 50, critical: 70 }
         }
     };
 

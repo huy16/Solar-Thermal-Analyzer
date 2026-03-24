@@ -142,6 +142,43 @@ function gatherFormData() {
     return OM_DATA;
 }
 
+/**
+ * Compresses an image file for faster upload without sacrificing print quality.
+ * Keeps original for BMT (raw data), compresses JPG/PNG.
+ */
+async function compressImage(file, maxWidth = 1600, maxHeight = 1600) {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth || height > maxHeight) {
+                    if (width > height) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    resolve(blob || file);
+                }, 'image/jpeg', 0.82);
+            };
+        };
+    });
+}
+
 // Auto-evaluate UI function for Earth Resistance
 function evaluateEarthResistance(index, value) {
     const evalSpan = document.getElementById(`er-eval-${index}`);
@@ -209,32 +246,40 @@ async function uploadFiles() {
     formData.append('omData', JSON.stringify(finalOmData)); // Append full data object
 
     // Append dynamically collected thermal images for Section 10 (pv, ac, inverter)
-    // We append them as 'files' so backend BMT parser processes them, but we prepend category to originalname
     if (window.dynamicThermalFiles) {
         for (const [category, fileArray] of Object.entries(window.dynamicThermalFiles)) {
-            fileArray.forEach(file => {
+            for (const file of fileArray) {
                 let prefix = category;
                 if (category === 'ac') prefix = 'cabinet';
-                formData.append('files', file, `${prefix}_${file.name}`);
-            });
+                
+                // Only compress standard images, skip .BMT as it contains raw metadata
+                let fileToUpload = file;
+                const isBMT = file.name.toUpperCase().endsWith('.BMT');
+                if (!isBMT && file.type.startsWith('image/')) {
+                    fileToUpload = await compressImage(file);
+                }
+                
+                formData.append('files', fileToUpload, `${prefix}_${file.name}`);
+            }
         }
     }
 
-    // Append Technician Signature if present
+    // Append Technician Signature if present (Compressed)
     const sigInput = document.getElementById('signatureInput');
     if (sigInput && sigInput.files && sigInput.files[0]) {
-        formData.append('signature', sigInput.files[0]);
+        const compressedSig = await compressImage(sigInput.files[0], 800, 800);
+        formData.append('signature', compressedSig, 'signature.jpg');
     }
 
-    // Gather all checklist image proofs
+    // Gather all checklist image proofs (Compressed)
     const imageInputs = document.querySelectorAll('input[type="file"][data-image-key]');
-    imageInputs.forEach(input => {
+    for (const input of imageInputs) {
         if (input.files && input.files.length > 0) {
             const key = input.getAttribute('data-image-key');
-            // Append with the mapped key so the backend can easily identify Which check it's for
-            formData.append(key, input.files[0]);
+            const compressedItem = await compressImage(input.files[0]);
+            formData.append(key, compressedItem, input.files[0].name);
         }
-    });
+    }
 
     try {
         const response = await fetch('/upload', {

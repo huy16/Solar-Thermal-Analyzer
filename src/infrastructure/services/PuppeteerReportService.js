@@ -74,7 +74,7 @@ class PuppeteerReportService extends IReportService {
             .title-main { text-align: center; font-weight: bold; font-size: 15pt; color: #000; margin: 5px 0 2px 0; text-transform: uppercase; }
             .title-sub { text-align: center; font-style: italic; font-size: 9pt; margin-bottom: 15px; color: #333; }
             
-            .section-header { color: #cc0000; font-weight: bold; margin-top: 12px; margin-bottom: 5px; font-size: 11pt; border-bottom: 1.5px solid #cc0000; padding-bottom: 2px; }
+            .section-header { border-top: 1.5px solid #cc0000; padding-top: 8px; color: #cc0000; font-weight: bold; margin-top: 25px; margin-bottom: 8px; font-size: 11pt; }
             .section-title { font-weight: bold; color: #002d5a; margin-top: 8px; margin-bottom: 5px; font-size: 10pt; }
             
             .info-table { width: 100%; border: none; margin-bottom: 8px; }
