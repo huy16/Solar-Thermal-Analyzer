@@ -191,8 +191,8 @@ class PuppeteerReportService extends IReportService {
                 ${(omData.pvSystem.checklist || []).map(c => `
                     <tr>
                         <td>${c.item.replace(/\n/g, '<br/>')}</td>
-                        <td class="text-center">${this._renderCheck(c.status === 'OK')}</td>
-                        <td class="text-center">${this._renderCheck(c.status !== 'OK')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'Not OK' || c.status === 'Không Đạt')}</td>
                         <td>${c.remarks || ''}</td>
                     </tr>
                 `).join('')}
@@ -209,8 +209,8 @@ class PuppeteerReportService extends IReportService {
                 ${(omData.pvSystem.thermalCheck || []).map(c => `
                     <tr>
                         <td>${c.item.replace('\n', '<br/>')}</td>
-                        <td class="text-center">${this._renderCheck(c.status === 'OK')}</td>
-                        <td class="text-center">${this._renderCheck(c.status !== 'OK')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'Not OK' || c.status === 'Không Đạt')}</td>
                         <td>${c.remarks || ''}</td>
                     </tr>
                 `).join('')}
@@ -280,7 +280,7 @@ class PuppeteerReportService extends IReportService {
                     <tr>
                         <td>${c.item.replace(/\n/g, '<br/>')}</td>
                         <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
-                        <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'Not OK' || c.status === 'Không Đạt')}</td>
                         <td>${c.remarks || ''}</td>
                     </tr>
                 `).join('')}
@@ -316,7 +316,7 @@ class PuppeteerReportService extends IReportService {
                         <tr>
                             <td>${c.item.replace(/\n/g, '<br/>')}</td>
                             <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
-                            <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                            <td class="text-center">${this._renderCheck(c.status === 'Not OK' || c.status === 'Không Đạt')}</td>
                             <td>${c.remarks || ''}</td>
                         </tr>
                     `).join('')}
@@ -341,7 +341,7 @@ class PuppeteerReportService extends IReportService {
                     <tr>
                         <td>${c.item.replace(/\n/g, '<br/>')}</td>
                         <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
-                        <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'Not OK' || c.status === 'Không Đạt')}</td>
                         <td>${c.remarks || ''}</td>
                     </tr>
                 `).join('')}
@@ -384,7 +384,7 @@ class PuppeteerReportService extends IReportService {
                     <tr>
                         <td>${c.item.replace(/\n/g, '<br/>')}</td>
                         <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
-                        <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'Not OK' || c.status === 'Không Đạt')}</td>
                         <td>${c.remarks || ''}</td>
                     </tr>
                 `).join('')}

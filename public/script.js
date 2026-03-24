@@ -1,11 +1,14 @@
 let OM_DATA = {};
+window.currentModuleVoc = 0;
 
 const SAMPLE_PV_DATA = [
-    { manufacturer: 'Canadian Solar', model: 'HiKu7 CS7N-MS', capacity: 660, qty: 100 },
-    { manufacturer: 'Canadian Solar', model: 'CS6.2-66TB-625', capacity: 625, qty: 100 },
-    { manufacturer: 'Astronergy', model: 'ASTRO-5 CHSM72M-HC', capacity: 550, qty: 100 },
-    { manufacturer: 'TCL', model: 'N-Type Topcon G12', capacity: 700, qty: 100 },
-    { manufacturer: 'Hershey', model: 'HSM-BD72-GC635-660', capacity: 650, qty: 100 }
+    { manufacturer: 'Canadian Solar', model: 'HiKu7 CS7N-660MS', capacity: 660, voc: 45.4, qty: 100 },
+    { manufacturer: 'Canadian Solar', model: 'HiKu7 CS7N-650MS', capacity: 650, voc: 45.0, qty: 100 },
+    { manufacturer: 'Canadian Solar', model: 'CS6.2-66TB-625', capacity: 625, voc: 48.6, qty: 100 },
+    { manufacturer: 'Astronergy', model: 'ASTRO-5 CHSM72M-HC 550W', capacity: 550, voc: 50.1, qty: 100 },
+    { manufacturer: 'TCL/HSPV', model: 'N-Type Topcon G12 700W', capacity: 700, voc: 48.0, qty: 100 },
+    { manufacturer: 'Hershey/TCL', model: 'HSM-BD72-GC650', capacity: 650, voc: 54.0, qty: 100 },
+    { manufacturer: 'HSPV', model: 'HSM-GHF-NM630', capacity: 630, voc: 48.9, qty: 100 }
 ];
 
 const SAMPLE_INVERTER_DATA = [
@@ -97,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response.ok) {
             OM_DATA = await response.json();
             bindDataToForm(OM_DATA);
+            refreshAllSelectColors();
             updateSidebarStatus(); // Initial status check
             showToast('Dữ liệu biểu mẫu đã được tải.');
         } else {
@@ -167,13 +171,11 @@ function selectAllNormal(tabId) {
  * Update select color based on value
  */
 function updateSelectColor(select) {
-    const val = select.value;
-    select.classList.remove('status-ok', 'status-nok');
-    if (val === 'OK' || val === 'Đạt' || val === 'Normal') {
-        select.classList.add('status-ok');
-    } else if (val === 'Not OK' || val === 'Không Đạt' || val === 'Nok') {
-        select.classList.add('status-nok');
-    }
+    // Reverted to default as requested by user
+    select.classList.remove('bg-green-600', 'bg-red-600', 'text-white', 'font-bold', 'status-ok', 'status-nok');
+    select.style.color = '';
+    select.style.backgroundColor = '';
+    select.style.fontWeight = '';
 }
 
 // Global listener for select colors
@@ -182,6 +184,19 @@ document.addEventListener('change', (e) => {
         updateSelectColor(e.target);
     }
 });
+
+document.addEventListener('input', (e) => {
+    if (e.target.tagName === 'SELECT') {
+        updateSelectColor(e.target);
+    }
+});
+
+/**
+ * Initialize all select colors on load
+ */
+function refreshAllSelectColors() {
+    document.querySelectorAll('select').forEach(updateSelectColor);
+}
 
 // Data Binding utility
 function bindDataToForm(data) {
@@ -332,8 +347,16 @@ async function uploadFiles() {
     
     if (statusDiv) {
         statusDiv.classList.remove('hidden');
-        statusDiv.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span> <span>Đang xử lý... Vui lòng đợi trong giây lát...</span>';
         statusDiv.className = 'status processing';
+        statusDiv.innerHTML = `
+            <div class="spinner-bars">
+                <div></div><div></div><div></div><div></div>
+                <div></div><div></div><div></div><div></div>
+                <div></div><div></div><div></div><div></div>
+            </div>
+            <div class="status-text">Đang khởi tạo báo cáo</div>
+            <div class="status-subtext">Vui lòng đợi trong giây lát...</div>
+        `;
     } else {
         showToast('Đang khởi tạo tạo báo cáo... Vui lòng đợi...');
     }
@@ -418,8 +441,12 @@ async function uploadFiles() {
             a.remove();
             window.URL.revokeObjectURL(url);
             if (statusDiv) {
-                statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> <span>Tạo báo cáo thành công! Tải xuống đang bắt đầu.</span>';
                 statusDiv.className = 'status success';
+                statusDiv.innerHTML = `
+                    <span class="material-symbols-outlined text-[48px] mb-2 text-green-500">check_circle</span>
+                    <div class="status-text">Xuất báo cáo thành công!</div>
+                    <div class="status-subtext">Tải xuống đang bắt đầu...</div>
+                `;
                 // Auto-hide success after 5 seconds
                 setTimeout(() => {
                     statusDiv.classList.add('hidden');
@@ -430,16 +457,24 @@ async function uploadFiles() {
         } else {
             const errorText = await response.text();
             if (statusDiv) {
-                statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi server: ' + errorText + '</span>';
                 statusDiv.className = 'status error';
+                statusDiv.innerHTML = `
+                    <span class="material-symbols-outlined text-[42px] mb-2 text-red-500">error</span>
+                    <div class="status-text">Lỗi máy chủ</div>
+                    <div class="status-subtext">${errorText || 'Vui lòng thử lại sau.'}</div>
+                `;
             }
             showToast('Lỗi server: ' + errorText, 'error');
         }
     } catch (error) {
         console.error(error);
         if (statusDiv) {
-            statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi kết nối: ' + error.message + '</span>';
             statusDiv.className = 'status error';
+            statusDiv.innerHTML = `
+                <span class="material-symbols-outlined text-[42px] mb-2 text-red-500">error</span>
+                <div class="status-text">Lỗi kết nối</div>
+                <div class="status-subtext">${error.message || 'Kiểm tra lại đường truyền.'}</div>
+            `;
         }
         showToast('Lỗi kết nối: ' + error.message, 'error');
     } finally {
@@ -748,6 +783,10 @@ function applySample(type, index) {
         if (modInput) modInput.value = data.model;
         if (capInput) capInput.value = data.capacity;
         if (qtyInput) qtyInput.value = data.qty;
+        
+        // Store Voc for calculations
+        window.currentModuleVoc = data.voc || 0;
+        updateAllCalculatedVoc();
     } else if (type === 'inverter') {
         const manInput = document.querySelector('[data-path="inverter.specs.manufacturer"]');
         const modInput = document.querySelector('[data-path="inverter.specs.model"]');
@@ -775,3 +814,53 @@ function applySample(type, index) {
     closeSampleModal(type);
     showToast(`Đã áp dụng thông số mẫu cho ${data.model}`);
 }
+
+/**
+ * Automatically calculate Voc for all strings in Section 3 based on currentModuleVoc
+ */
+function updateAllCalculatedVoc() {
+    if (!window.currentModuleVoc) return;
+
+    // The Insulation Resistance table has rows for String 1-20 (or more)
+    // We look for inputs with data-path like pvSystem.insulationResistance.X.panelQty
+    const rows = document.querySelectorAll('input[data-path*="pvSystem.insulationResistance"]');
+    
+    // Group by index
+    const indices = new Set();
+    rows.forEach(r => {
+        const match = r.getAttribute('data-path').match(/pvSystem\.insulationResistance\.(\d+)\./);
+        if (match) indices.add(match[1]);
+    });
+
+    indices.forEach(idx => {
+        const qtyInput = document.querySelector(`[data-path="pvSystem.insulationResistance.${idx}.panelQty"]`);
+        const vocInput = document.querySelector(`[data-path="pvSystem.insulationResistance.${idx}.voc"]`);
+        
+        if (qtyInput && vocInput) {
+            const qty = parseFloat(qtyInput.value);
+            if (!isNaN(qty) && qty > 0) {
+                vocInput.value = (qty * window.currentModuleVoc).toFixed(1);
+                // Trigger change for data binding if needed
+                vocInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });
+}
+
+// Add dynamic listener for Panel Qty changes in Section 3 table
+document.addEventListener('input', (e) => {
+    if (e.target.getAttribute('data-path') && e.target.getAttribute('data-path').includes('pvSystem.insulationResistance') && e.target.getAttribute('data-path').includes('panelQty')) {
+        const path = e.target.getAttribute('data-path');
+        const idxMatch = path.match(/pvSystem\.insulationResistance\.(\d+)\.panelQty/);
+        if (idxMatch && window.currentModuleVoc) {
+            const idx = idxMatch[1];
+            const vocInput = document.querySelector(`[data-path="pvSystem.insulationResistance.${idx}.voc"]`);
+            if (vocInput) {
+                const qty = parseFloat(e.target.value);
+                if (!isNaN(qty)) {
+                    vocInput.value = (qty * window.currentModuleVoc).toFixed(1);
+                }
+            }
+        }
+    }
+});
