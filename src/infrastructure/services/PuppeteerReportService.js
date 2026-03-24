@@ -17,7 +17,9 @@ class PuppeteerReportService extends IReportService {
                 // Categorized format: each category takes Math.max(1, ceil(items/2)) pages
                 thermalPagesCount = thermalDataList.reduce((acc, cat) => {
                     const count = cat.items ? cat.items.length : 0;
-                    return acc + Math.max(1, Math.ceil(count / 2));
+                    // Even count: full last page means remarks need their own page to avoid dính footer
+                    const pages = (count > 0 && count % 2 === 0) ? (count / 2 + 1) : Math.max(1, Math.ceil(count / 2));
+                    return acc + pages;
                 }, 0);
             } else {
                 thermalPagesCount = thermalDataList.length;
@@ -553,7 +555,7 @@ class PuppeteerReportService extends IReportService {
         html += `<div class="report-page">
             ${this._renderHeader(logoBase64)}
             ${this._renderWatermark(logoBase64)}
-            <div class="section-header">13. Xác nhận & Chữ ký / <span class="italic">Sign-off & Confirmation</span></div>
+            <div class="section-header">13. Ký & Xuất Báo Cáo / <span class="italic">Sign-off & Confirmation</span></div>
             
             <table class="sig-table">
                 <tr>
@@ -562,8 +564,8 @@ class PuppeteerReportService extends IReportService {
                 </tr>
                 <tr>
                     <td>
-                        <div class="sig-field">Họ tên / <span class="italic">Full Name</span>:</div>
-                        <div class="sig-field">Chức vụ / <span class="italic">Position</span>:</div>
+                        <div class="sig-field">Họ tên / <span class="italic">Full Name</span>: ${omData.technicianName || ''}</div>
+                        <div class="sig-field">Chức vụ / <span class="italic">Position</span>: ${omData.technicianPosition || ''}</div>
                         <div class="sig-field">Ngày / <span class="italic">Date</span>:</div>
                         <div class="sig-stamp">
                             ${omData.technicianSignature ? `<img src="${omData.technicianSignature}" style="max-height: 80px; max-width: 200px; display: block; margin: 0 auto 5px auto;">` : ''}
@@ -571,10 +573,13 @@ class PuppeteerReportService extends IReportService {
                         </div>
                     </td>
                     <td>
-                        <div class="sig-field">Họ tên / <span class="italic">Full Name</span>:</div>
-                        <div class="sig-field">Chức vụ / <span class="italic">Position</span>:</div>
-                        <div class="sig-field">Điện thoại / <span class="italic">Phone</span>:</div>
-                        <div class="sig-stamp">[Chữ ký / <span class="italic">Signature</span>]</div>
+                        <div class="sig-field">Họ tên / <span class="italic">Full Name</span>: ${omData.clientName || ''}</div>
+                        <div class="sig-field">Chức vụ / <span class="italic">Position</span>: ${omData.clientPosition || ''}</div>
+                        <div class="sig-field">Ngày / <span class="italic">Date</span>:</div>
+                        <div class="sig-stamp">
+                            ${omData.clientSignature ? `<img src="${omData.clientSignature}" style="max-height: 80px; max-width: 200px; display: block; margin: 0 auto 5px auto;">` : ''}
+                            [Chữ ký / <span class="italic">Signature</span>]
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -718,12 +723,37 @@ class PuppeteerReportService extends IReportService {
                 });
 
                 if (isLastChunkOfCat) {
-                    html += `
-                    <div style="margin-top: 10px; padding: 12px; border: 1px solid #0056b3; background: #f4f9ff; border-radius: 6px; page-break-inside: avoid;">
-                        <div style="font-weight: bold; font-size: 9pt; color: #0056b3; margin-bottom: 5px;">Nhận xét / Remarks:</div>
-                        <div style="font-size: 8.5pt; color: #333; line-height: 1.5; font-style: italic;">"${catRemarks}"</div>
-                    </div>
-                    `;
+                    if (chunk.length === 2) {
+                        // Close current page and start a new one for Remarks
+                        html += `
+                            ${this._renderFooter(pageNum, totalPages)}
+                        </div>`;
+                        pageOffset++;
+                        pageNum = startPage + pageOffset;
+                        html += `
+                        <div class="report-page">
+                            ${this._renderHeader(logo)}
+                            ${this._renderWatermark(logo)}
+                            <div style="font-weight: bold; font-size: 13pt; color: #0056b3; border-bottom: 1.5px solid #0056b3; padding-bottom: 5px; margin-bottom: 15px; margin-top: 10px;">
+                                ${cat.categoryTitle} - Nhận xét / Remarks
+                            </div>
+                            <div style="margin-top: 20px; padding: 15px; border: 1.5px solid #0056b3; background: #f4f9ff; border-radius: 8px;">
+                                <div style="font-weight: bold; font-size: 10pt; color: #0056b3; margin-bottom: 10px;">Đánh giá tổng quan mục ${cat.categoryTitle}:</div>
+                                <div style="font-size: 9.5pt; color: #333; line-height: 1.6; font-style: italic;">"${catRemarks}"</div>
+                            </div>
+                            <div style="margin-top: 40px; font-size: 9pt; color: #666;">
+                                <p>• Các vị trí có nhiệt độ bất thường đã được ghi nhận chi tiết trong bảng phân tích phía trên.</p>
+                                <p>• Đề nghị theo dõi định kỳ và kiểm tra các điểm đấu nối nếu có cảnh báo (Warning/Critical).</p>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                        <div style="margin-top: 20px; padding: 12px; border: 1px solid #0056b3; background: #f4f9ff; border-radius: 6px; page-break-inside: avoid;">
+                            <div style="font-weight: bold; font-size: 9pt; color: #0056b3; margin-bottom: 5px;">Nhận xét / Remarks:</div>
+                            <div style="font-size: 8.5pt; color: #333; line-height: 1.5; font-style: italic;">"${catRemarks}"</div>
+                        </div>
+                        `;
+                    }
                 }
 
                 html += `

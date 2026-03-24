@@ -26,7 +26,7 @@
                         "primary": "#0055A5",
                         "primary-container": "#F7931D",
                         "secondary": "#486176",
-                        "tertiary": "#005151",
+                        "tertiary": "#16a34a",
                         "tertiary-fixed": "#a0f0f0",
                         "tertiary-container": "#036b6b",
                         "on-tertiary-fixed": "#002020",
@@ -56,11 +56,16 @@
                         shimmer: {
                             '0%': { backgroundPosition: '-200% center' },
                             '100%': { backgroundPosition: '200% center' },
+                        },
+                        pulse: {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.2 },
                         }
                     },
                     animation: {
                         fadeIn: 'fadeIn 0.4s ease-out forwards',
                         shimmer: 'shimmer 3s ease-in-out infinite',
+                        pulse: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     }
                 },
             },
@@ -160,6 +165,45 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #c2c6d4; border-radius: 10px; }
         
+        /* Status Colors (Selects) */
+        select.status-ok { color: #16a34a !important; font-weight: 700 !important; }
+        select.status-nok { color: #dc2626 !important; font-weight: 700 !important; }
+
+        /* Status Overlay (Centered) */
+        #status.status {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            padding: 1.5rem 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 90vw;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .status.processing { color: #2563eb; background: rgba(239, 246, 255, 0.95); display: flex !important; }
+        .status.success { color: #16a34a; background: rgba(240, 253, 244, 0.95); display: flex !important; border-color: #16a34a !important; }
+        .status.error { color: #dc2626; background: rgba(254, 242, 242, 0.95); display: flex !important; border-color: #dc2626 !important; }
+
+        /* Toast Visibility (Bottom Center) */
+        #toast.show {
+            opacity: 1 !important;
+            transform: translate(-50%, -1rem) !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Status Markers */
+        .node-dot.completed {
+            @apply bg-green-500 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)];
+        }
+        .node-dot.completed::after {
+            content: 'check';
+            font-family: 'Material Symbols Outlined';
+            @apply text-white text-[8px] flex items-center justify-center h-full w-full font-black;
+        }
+        
         /* Inputs & Uploads */
         .upload-area {
             @apply border-2 border-dashed border-outline-variant/60 rounded-xl p-8 cursor-pointer transition-all bg-surface-container-low text-center flex flex-col items-center justify-center;
@@ -185,7 +229,7 @@
         .checklist-item select,
         table input[type="text"],
         table select {
-            @apply bg-slate-50 border border-slate-200 text-sm font-medium transition-all outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 hover:border-primary/40 !important;
+            @apply bg-slate-50 border border-slate-200 text-xs font-medium transition-all outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 hover:border-primary/40 !important;
         }
 
         /* Specific sizing for standalone groups */
@@ -285,15 +329,18 @@
     
     <!-- SideNavBar (13 sections) -->
     <aside class="w-72 h-full flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col p-4 gap-2 font-headline tracking-tight z-50">
-        <div class="mb-4 px-2 flex items-center gap-3">
-            <img src="assets/cas_full_logo.png" alt="CAS Logo" class="h-10 object-contain">
+        <div class="mb-6 px-2 flex items-center gap-3">
+            <img src="assets/cas_full_logo.png" alt="CAS Logo" class="h-8 object-contain">
             <div>
-                <h1 class="text-base font-bold text-slate-900 leading-tight block truncate w-40">SOLAR REPORT</h1>
-                <p class="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">13-Step O&M System</p>
+                <h1 class="text-base font-black leading-tight block truncate w-40 bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent tracking-tighter">SOLAR REPORT</h1>
+                <p class="text-[9px] text-slate-400 uppercase tracking-widest font-bold">13-Step O&M System</p>
             </div>
         </div>
 
-        <nav class="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-2 pt-2 pb-6 relative select-none" id="stepperNav">
+        <nav class="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar pr-2 pt-2 pb-6 relative select-none" id="stepperNav">
+            <!-- Section Header -->
+            <h3 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-2">Dữ liệu báo cáo</h3>
+            
             <!-- Connecting Line for Stepper -->
             <div class="absolute left-[26px] top-4 bottom-16 w-[2px] bg-slate-200 z-0 hidden md:block"></div>
 
@@ -301,7 +348,9 @@
             <div class="stepper-group" data-group="1">
                 <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-surface" onclick="toggleGroup(1)">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shadow-md border-2 border-white z-10 transition-colors stepper-node">1</div>
+                        <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md border-2 border-white z-10 transition-colors stepper-node">
+                            <span class="material-symbols-outlined text-[18px]">rocket_launch</span>
+                        </div>
                         <span class="font-bold text-[13px] text-slate-800 uppercase tracking-wide">I. Khởi tạo</span>
                     </div>
                     <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300 transform rotate-180" id="icon-group-1">expand_more</span>
@@ -323,7 +372,9 @@
             <div class="stepper-group mt-1" data-group="2">
                 <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(2)">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">2</div>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-sm border-2 border-white z-10 transition-colors stepper-node">
+                            <span class="material-symbols-outlined text-[18px]">solar_power</span>
+                        </div>
                         <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">II. Hệ thống PV</span>
                     </div>
                     <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-2">expand_more</span>
@@ -345,7 +396,9 @@
             <div class="stepper-group mt-1" data-group="3">
                 <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(3)">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">3</div>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-sm border-2 border-white z-10 transition-colors stepper-node">
+                            <span class="material-symbols-outlined text-[18px]">bolt</span>
+                        </div>
                         <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">III. Inverter & Điện</span>
                     </div>
                     <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-3">expand_more</span>
@@ -374,7 +427,9 @@
             <div class="stepper-group mt-1" data-group="4">
                 <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(4)">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">4</div>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-sm border-2 border-white z-10 transition-colors stepper-node">
+                            <span class="material-symbols-outlined text-[18px]">architecture</span>
+                        </div>
                         <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">IV. Kết cấu & Đo kiểm</span>
                     </div>
                     <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-4">expand_more</span>
@@ -399,7 +454,9 @@
             <div class="stepper-group mt-1" data-group="5">
                 <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(5)">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">5</div>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-sm border-2 border-white z-10 transition-colors stepper-node">
+                            <span class="material-symbols-outlined text-[18px]">fact_check</span>
+                        </div>
                         <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">V. Tổng kết</span>
                     </div>
                     <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-5">expand_more</span>
@@ -411,15 +468,30 @@
                     </div>
                     <div class="nav-item-premium relative group" data-tab="tab-13">
                         <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
-                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">13. Cập nhật & Xuất Báo Cáo</span>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">13. Xác nhận & Chữ ký</span>
                     </div>
                 </div>
             </div>
         </nav>
 
-        <button onclick="logout()" class="mt-auto flex items-center justify-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors border border-red-100 mb-2">
-            <span class="material-symbols-outlined text-[16px]">logout</span> Đăng xuất
-        </button>
+        <div class="mt-auto flex flex-col gap-3 relative z-10 pb-4 border-b border-slate-200/60 mb-4">
+            <h3 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Hành động</h3>
+            <button type="button" id="uploadBtn" class="w-full relative overflow-hidden group flex items-center justify-center gap-2 bg-gradient-to-r from-primary via-primary to-blue-700 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all border border-white/10 active:scale-[0.98]">
+                <span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">picture_as_pdf</span>
+                <span class="relative z-10">Xuất báo cáo PDF</span>
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-mirror-shine"></div>
+            </button>
+        </div>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="flex items-center justify-between px-2 text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+            <span>CAS Solar © 2026</span>
+            <button onclick="logout()" class="flex items-center gap-1.5 hover:text-red-500 transition-colors group">
+                <span class="material-symbols-outlined text-[16px] group-hover:rotate-12 transition-transform">logout</span>
+                Đăng xuất
+            </button>
+        </div>
     </aside>
 
     <!-- Content Area (Header + Main) -->
@@ -428,13 +500,13 @@
         <header class="bg-white/90 backdrop-blur-xl border-b border-slate-100 flex justify-between items-center px-8 h-16 shadow-sm z-40">
             <div class="flex items-center gap-3">
                 <span class="font-black text-blue-800 font-headline uppercase tracking-wider text-sm flex items-center gap-2">
-                    <span class="material-symbols-outlined text-accent" style="color: #f97316;">wb_sunny</span>
+                    <span class="material-symbols-outlined text-accent animate-[spin_4s_linear_infinite]" style="color: #f97316; display: inline-block;">wb_sunny</span>
                     CAS Energy Solutions
                 </span>
             </div>
             <div class="flex items-center gap-3">
                 <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-tertiary/10 rounded-full">
-                    <div class="w-2 h-2 rounded-full bg-tertiary"></div>
+                    <div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
                     <span class="text-[10px] font-bold text-tertiary uppercase tracking-tighter">System: Online</span>
                 </div>
             </div>
@@ -610,7 +682,13 @@
                     </div>
 
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Hạng mục kiểm tra / <span class="italic text-slate-500">Inspection Items</span></h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">Hạng mục kiểm tra / <span class="italic text-slate-500">Inspection Items</span></h3>
+                            <button type="button" onclick="selectAllNormal('tab-3')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         
                         <div class="mb-4"><h4 class="text-sm font-bold text-slate-700">Kiểm tra bên ngoài <span class="italic text-slate-500 font-normal">(External visual inspection)</span></h4></div>
                         
@@ -621,6 +699,7 @@
                             </div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="pvSystem.checklist.0.status">
+                                    <option value="" disabled selected>-- Chọn --</option>
                                     <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
                                 </select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.0.remarks">
@@ -634,6 +713,7 @@
                             </div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="pvSystem.checklist.1.status">
+                                    <option value="" disabled selected>-- Chọn --</option>
                                     <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
                                 </select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.1.remarks">
@@ -647,6 +727,7 @@
                             </div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="pvSystem.checklist.2.status">
+                                    <option value="" disabled selected>-- Chọn --</option>
                                     <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
                                 </select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.2.remarks">
@@ -660,6 +741,7 @@
                             </div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="pvSystem.checklist.3.status">
+                                    <option value="" disabled selected>-- Chọn --</option>
                                     <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
                                 </select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.3.remarks">
@@ -674,7 +756,10 @@
                                     <p class="text-[11px] text-slate-500 italic">Full array thermal scan (≤ 65°C) - Thiết bị: Testo 871</p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <select class="w-28 text-sm" data-path="pvSystem.thermalCheck.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                    <select class="w-28 text-sm" data-path="pvSystem.thermalCheck.0.status">
+                                        <option value="" disabled selected>-- Chọn --</option>
+                                        <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
+                                    </select>
                                     <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.thermalCheck.0.remarks">
                             </div>
                         </div>
@@ -703,39 +788,45 @@
                     </div>
 
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                            <button type="button" onclick="selectAllNormal('tab-4')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan & chi tiết khung giá đỡ</p><p class="text-[11px] text-slate-500 italic">Overall and detailed photo of mounting structure</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Siết lực ốc kẹp biên (end clamp) – theo torque nhà SX</p><p class="text-[11px] text-slate-500 italic">End clamp torque check – per manufacturer spec</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.1.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.1.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Siết lực ốc kẹp giữa (mid clamp) – theo torque nhà SX</p><p class="text-[11px] text-slate-500 italic">Mid clamp torque check – per manufacturer spec</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.2.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.2.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra ống ruột gà đi dây cáp DC trên mái</p><p class="text-[11px] text-slate-500 italic">DC cable conduit on roof</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.3.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra kẹp dây DC & cố định đầu nối MC4</p><p class="text-[11px] text-slate-500 italic">DC cable clamps & MC4 connector fixation</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.4.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.4.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.4.remarks">
                             </div>
                         </div>
@@ -765,71 +856,83 @@
                     </div>
 
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">flash_on</span>Kiểm tra CÓ ĐIỆN / <span class="italic text-slate-500 font-normal">Energized inspection</span></h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">flash_on</span>Kiểm tra CÓ ĐIỆN / <span class="italic text-slate-500 font-normal">Energized inspection</span></h3>
+                            <button type="button" onclick="selectAllNormal('tab-5')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan & chi tiết thiết bị trong tủ</p><p class="text-[11px] text-slate-500 italic">Overall & detail photo of cabinet interior</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra trạng thái / cơ hoạt động từng thiết bị điện</p><p class="text-[11px] text-slate-500 italic">Check status indicator of each electrical device</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.1.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh chi tiết nếu phát hiện hoạt động bất thường</p><p class="text-[11px] text-slate-500 italic">Detail photo if abnormal operation found</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.2.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.2.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Quét nhiệt tủ AC Solar (≤ 65°C tại điểm đấu nối)</p><p class="text-[11px] text-slate-500 italic">Thermal scan of AC cabinet (≤ 65°C at terminals)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.3.remarks">
                             </div>
                         </div>
                     </div>
 
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">power_off</span>Kiểm tra KHÔNG ĐIỆN / <span class="italic text-slate-500 font-normal">De-Energized inspection</span></h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">power_off</span>Kiểm tra KHÔNG ĐIỆN / <span class="italic text-slate-500 font-normal">De-Energized inspection</span></h3>
+                            <button type="button" onclick="selectAllNormal('tab-5')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.4. Kiểm tra, siết lực các đầu nối điện (MCCB, MCB, Terminal)</p><p class="text-[11px] text-slate-500 italic">Check & torque electrical terminals (MCCB, MCB, Terminal)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.5. Đo điện trở cách điện (Hioki IR4053-10 - ≥ 1 MΩ)</p><p class="text-[11px] text-slate-500 italic">Insulation resistance test - ≥ 1 MΩ</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.1.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.1.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.6. Đo điện trở nối đất (Kyoritsu 4105A - ≤ 4 Ω)</p><p class="text-[11px] text-slate-500 italic">Earth resistance test - ≤ 4 Ω</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.2.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.2.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.7. Kiểm tra độ kín bụi; xịt foam các lỗ hở trên vỏ tủ</p><p class="text-[11px] text-slate-500 italic">Check dust sealing; foam-seal any openings</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.3.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.8. Vệ sinh bên trong tủ và lưới chắn bụi</p><p class="text-[11px] text-slate-500 italic">Clean interior and dust filter</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.4.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.4.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.4.remarks">
                             </div>
                         </div>
@@ -859,60 +962,66 @@
                         </div>
                     </div>
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">settings_input_component</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">settings_input_component</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                            <button type="button" onclick="selectAllNormal('tab-6')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra & siết lực đầu đấu nối AC của Inverter</p><p class="text-[11px] text-slate-500 italic">Check & torque AC terminal connections</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra đầu kết nối MC4 phía DC</p><p class="text-[11px] text-slate-500 italic">Check DC side MC4 connector condition</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.1.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.1.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh nhãn string dây DC – kiểm tra ghi chú đúng chuẩn</p><p class="text-[11px] text-slate-500 italic">Clean DC string labels – verify labelling standard</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.2.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.2.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh quạt tản nhiệt (nếu có)</p><p class="text-[11px] text-slate-500 italic">Clean cooling fan (if present)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.3.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh / quét bụi toàn bộ thân Inverter</p><p class="text-[11px] text-slate-500 italic">Clean / dust inverter body</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.4.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.4.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.4.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra log lỗi / cảnh báo trên màn hình Inverter</p><p class="text-[11px] text-slate-500 italic">Check inverter display for error logs / warnings</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.5.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.5.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.5.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra portal / app giám sát online</p><p class="text-[11px] text-slate-500 italic">Check online monitoring portal / app</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.6.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.6.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.6.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Cập nhật firmware (nếu có phiên bản mới)</p><p class="text-[11px] text-slate-500 italic">Update firmware (if new version available)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="inverter.checklist.7.status"><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="inverter.checklist.7.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.7.remarks">
                             </div>
                         </div>
@@ -940,25 +1049,31 @@
                     </div>
 
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Hạng mục kiểm tra</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">Hạng mục kiểm tra</h3>
+                            <button type="button" onclick="selectAllNormal('tab-7')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra ngoại quan: khung giá đỡ chắc chắn, không cong vênh</p><p class="text-[11px] text-slate-500 italic">Check: frame solid, no deformation</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.mountingFrame.0.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.mountingFrame.0.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.mountingFrame.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra & siết lực bu-lông liên kết khung – tường</p><p class="text-[11px] text-slate-500 italic">Check & torque frame-to-wall bolts</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.mountingFrame.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.mountingFrame.1.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.mountingFrame.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh & kiểm tra độ chắc chắn mái che Inverter (nếu có)</p><p class="text-[11px] text-slate-500 italic">Photo & check inverter weather cover (if present)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.mountingFrame.2.status"><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.mountingFrame.2.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.mountingFrame.2.remarks">
                             </div>
                         </div>
@@ -977,32 +1092,38 @@
                         </div>
                     </div>
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Hạng mục kiểm tra</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">Hạng mục kiểm tra</h3>
+                            <button type="button" onclick="selectAllNormal('tab-8')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra độ kín máng cáp AC & DC</p><p class="text-[11px] text-slate-500 italic">Check sealing of AC & DC cable tray</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.cableTray.0.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.cableTray.0.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Xịt foam làm kín các điểm hở chưa đạt tiêu chuẩn</p><p class="text-[11px] text-slate-500 italic">Foam-seal any non-compliant gaps</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.cableTray.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.cableTray.1.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">8.3. Kiểm tra đầu nối ống ruột gà với máng cáp (không hở, không lỏng)</p><p class="text-[11px] text-slate-500 italic">Check conduit-to-tray joints (no gap, no looseness)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.cableTray.2.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.cableTray.2.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">8.4. Kiểm tra kẹp dây DC & cố định đầu nối MC4</p><p class="text-[11px] text-slate-500 italic">DC cable clamps & MC4 connector fixation</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.cableTray.3.status"><option value="OK">OK</option><option value="Not OK">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.cableTray.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">OK</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.3.remarks">
                             </div>
                         </div>
@@ -1022,25 +1143,31 @@
                         </div>
                     </div>
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
-                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                            <button type="button" onclick="selectAllNormal('tab-9')" class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:text-white transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px] group-hover:animate-bounce">done_all</span>
+                                Chọn tất cả: Đạt
+                            </button>
+                        </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan xà gồ, vì kèo dưới mái tôn khu vực lắp pin</p><p class="text-[11px] text-slate-500 italic">Photo of purlins & rafters under metal roof at panel area</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.roofStructure.0.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.roofStructure.0.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra mối hàn liên kết cột – vì kèo</p><p class="text-[11px] text-slate-500 italic">Check weld joints between columns and rafters</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.roofStructure.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.roofStructure.1.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
                             <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra ngoại quan độ võng vì kèo</p><p class="text-[11px] text-slate-500 italic">Visual check of rafter deflection</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
-                                <select class="w-28 text-sm" data-path="others.roofStructure.2.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <select class="w-28 text-sm" data-path="others.roofStructure.2.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.2.remarks">
                             </div>
                         </div>
@@ -1137,7 +1264,7 @@
                     <div class="relative mb-4 rounded-xl overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
                         <div class="relative px-5 py-2.5 flex items-center gap-3">
-                            <span class="material-symbols-outlined text-white text-[22px]">grounding</span>
+                            <span class="material-symbols-outlined text-white text-[22px]">bolt</span>
                             <div>
                                 <h2 class="text-base font-headline font-bold text-white tracking-tight">11. Đo điện trở nối đất</h2>
                                 <p class="text-white/70 text-[10px]">Earth Resistance Test</p>
@@ -1146,9 +1273,9 @@
                     </div>
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div class="input-group"><label>Cọc tiếp địa chính (Ω) <span id="er-eval-0" class="ml-2 text-xs font-bold text-green-600">Đạt</span></label><input type="number" step="0.1" data-path="earthResistance.0.value" value="2.5" oninput="evaluateEarthResistance(0, this.value)"></div>
-                            <div class="input-group"><label>Vỏ Inverter (Ω) <span id="er-eval-1" class="ml-2 text-xs font-bold text-green-600">Đạt</span></label><input type="number" step="0.1" data-path="earthResistance.1.value" value="1.2" oninput="evaluateEarthResistance(1, this.value)"></div>
-                            <div class="input-group"><label>Vỏ tủ AC (Ω) <span id="er-eval-2" class="ml-2 text-xs font-bold text-green-600">Đạt</span></label><input type="number" step="0.1" data-path="earthResistance.2.value" value="1.5" oninput="evaluateEarthResistance(2, this.value)"></div>
+                            <div class="input-group"><label>Cọc tiếp địa chính (Ω) <span id="er-eval-0" class="ml-2 text-xs font-bold"></span></label><input type="number" step="0.1" data-path="earthResistance.0.value" value="" oninput="evaluateEarthResistance(0, this.value)"></div>
+                            <div class="input-group"><label>Vỏ Inverter (Ω) <span id="er-eval-1" class="ml-2 text-xs font-bold"></span></label><input type="number" step="0.1" data-path="earthResistance.1.value" value="" oninput="evaluateEarthResistance(1, this.value)"></div>
+                            <div class="input-group"><label>Vỏ tủ AC (Ω) <span id="er-eval-2" class="ml-2 text-xs font-bold"></span></label><input type="number" step="0.1" data-path="earthResistance.2.value" value="" oninput="evaluateEarthResistance(2, this.value)"></div>
                         </div>
                     </div>
                 </div>
@@ -1177,13 +1304,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">1. Pin PV</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.0.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.0.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.0.action" placeholder="Đề xuất..."></td></tr>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">2. Tủ AC Solar</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.1.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.1.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.1.action" placeholder="Đề xuất..."></td></tr>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">3. Biến tần</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.2.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.2.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.2.action" placeholder="Đề xuất..."></td></tr>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">4. Giá đỡ Tủ AC</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.3.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.3.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.3.action" placeholder="Đề xuất..."></td></tr>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">5. Máng cáp & Ống ruột gà</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.4.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.4.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.4.action" placeholder="Đề xuất..."></td></tr>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">6. Kết cấu mái</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.5.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.5.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.5.action" placeholder="Đề xuất..."></td></tr>
-                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">7. Tiếp địa</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.6.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.6.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.6.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">1. Pin PV</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.0.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.0.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.0.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">2. Tủ AC Solar</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.1.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.1.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.1.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">3. Biến tần</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.2.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.2.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.2.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">4. Giá đỡ Tủ AC</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.3.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.3.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.3.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">5. Máng cáp & Ống ruột gà</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.4.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.4.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.4.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">6. Kết cấu mái</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.5.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.5.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.5.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">7. Tiếp địa</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.6.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.6.description" value="" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.6.action" placeholder="Đề xuất..."></td></tr>
                             </tbody>
                         </table>
 
@@ -1208,10 +1335,10 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                        <!-- Signature Upload Card -->
-                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                        <!-- Technician Signature Card -->
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col">
                             <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[16px]">draw</span>Chữ ký kỹ thuật viên
+                                <span class="material-symbols-outlined text-[16px]">draw</span>Xác nhận Kỹ thuật viên
                             </h3>
                             
                             <div id="sigPreviewContainer" class="hidden mb-3 w-full flex flex-col items-center">
@@ -1221,42 +1348,87 @@
                                 </button>
                             </div>
 
-                            <label id="sigUploadBox" class="w-full py-8 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-primary/5 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2">
-                                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-xl">draw</span>
+                            <div class="grid grid-cols-1 gap-2 mb-4">
+                                <div class="input-group-premium">
+                                    <label>Họ tên Kỹ thuật viên / Full Name</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">person</span>
+                                        <input type="text" data-path="technicianName" placeholder="Nhập họ tên kỹ thuật viên...">
+                                    </div>
                                 </div>
-                                <div class="text-xs font-bold text-slate-700">Tải lên chữ ký kỹ thuật</div>
-                                <div class="text-[10px] text-slate-400 font-medium">Hỗ trợ PNG, JPG, JPEG</div>
-                                <input type="file" id="signatureInput" accept="image/*" class="hidden" onchange="handleSignatureUpload(this)">
-                            </label>
+                                <div class="input-group-premium">
+                                    <label>Chức vụ / Position</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">badge</span>
+                                        <input type="text" data-path="technicianPosition" placeholder="VD: Kỹ thuật viên O&M">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <label id="sigUploadBox" class="w-full py-6 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-primary/5 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-xl">draw</span>
+                                    </div>
+                                    <div class="text-[11px] font-bold text-slate-700 uppercase">Tải chữ ký Kỹ thuật</div>
+                                    <input type="file" id="signatureInput" accept="image/*" class="hidden" onchange="handleSignatureUpload(this)">
+                                </label>
+                            </div>
                         </div>
 
-                        <!-- Export Card -->
-                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-                            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2">
-                                <span class="material-symbols-outlined text-xl">task_alt</span>
+                        <!-- Client Signature Card -->
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">how_to_reg</span>Xác nhận Khách hàng
+                            </h3>
+
+                            <div id="clientSigPreviewContainer" class="hidden mb-3 w-full flex flex-col items-center">
+                                <img id="clientSigPreviewImg" class="max-h-24 object-contain bg-slate-50 rounded-xl border border-slate-200 p-2 shadow-sm" src="" alt="Client Signature Preview">
+                                <button type="button" onclick="removeClientSignature()" class="mt-2 text-[11px] font-bold text-red-500 uppercase tracking-wider hover:text-red-700 transition-colors flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">delete</span> Xóa chữ ký
+                                </button>
                             </div>
-                            <h3 class="font-headline font-bold text-[13px] mb-1 text-slate-800">Hoàn tất kiểm tra hệ thống</h3>
-                            <p class="text-slate-500 text-[11px] mb-3 max-w-xs mx-auto leading-relaxed">Vui lòng chắc chắn bạn đã điền đầy đủ các hạng mục và đính kèm hình ảnh minh chứng trước khi xuất dữ liệu.</p>
                             
-                            <button type="button" id="uploadBtn" class="w-full px-8 bg-gradient-to-br from-primary to-primary-container text-white py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                                <span class="material-symbols-outlined text-[18px]">description</span>
-                                Xuất File PDF (Generate Report)
-                            </button>
+                            <div class="grid grid-cols-1 gap-2 mb-4">
+                                <div class="input-group-premium">
+                                    <label>Họ tên đại diện / Client Name</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">person</span>
+                                        <input type="text" data-path="clientName" placeholder="Nhập họ tên đại diện khách hàng...">
+                                    </div>
+                                </div>
+                                <div class="input-group-premium">
+                                    <label>Chức vụ / Position</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">badge</span>
+                                        <input type="text" data-path="clientPosition" placeholder="VD: Quản lý nhà máy">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-auto">
+                                <label id="clientSigUploadBox" class="w-full py-6 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-primary/5 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-xl">id_card</span>
+                                    </div>
+                                    <div class="text-[11px] font-bold text-slate-700 uppercase">Tải chữ ký Khách hàng</div>
+                                    <input type="file" id="clientSignatureInput" accept="image/*" class="hidden" onchange="handleClientSignatureUpload(this)">
+                                </label>
+                            </div>
                         </div>
                     </div>
-
-                    <div id="status" class="text-xs font-medium px-4 py-3 rounded-xl hidden text-center max-w-2xl mx-auto shadow-sm animate-fadeIn"></div>
                 </div>
             </form>
         </main>
     </div>
 
-    <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-full text-sm font-medium shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px] text-green-400">check_circle</span>
         <span id="toast-msg">Data loaded!</span>
     </div>
+
+    <!-- Global Status Overlay -->
+    <div id="status" class="status hidden items-center gap-3 justify-center text-[14px] font-bold uppercase tracking-widest transition-all duration-300"></div>
 
     <!-- Shared Image Preview Logic for UI UX -->
     <script>

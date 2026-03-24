@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response.ok) {
             OM_DATA = await response.json();
             bindDataToForm(OM_DATA);
+            updateSidebarStatus(); // Initial status check
             showToast('Dữ liệu biểu mẫu đã được tải.');
         } else {
             console.error('Failed to load default OM data');
@@ -81,6 +82,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
         console.error('Error fetching OM data:', err);
     }
+
+    // 3. Attach Input Listeners for Real-time Sidebar Status
+    document.addEventListener('input', (e) => {
+        if (e.target.matches('input, textarea, select')) {
+            updateSidebarStatus();
+        }
+    });
 });
 
 // Toast notification
@@ -89,11 +97,68 @@ function showToast(message) {
     const toastMsg = document.getElementById('toast-msg');
     if (!toast || !toastMsg) return;
     toastMsg.textContent = message;
+    
+    // Clear any existing timeout
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    
     toast.classList.add('show');
-    setTimeout(() => {
+    window.toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
 }
+
+/**
+ * Select all items in a tab as "Đạt" (OK)
+ */
+function selectAllNormal(tabId) {
+    const tab = document.getElementById(tabId);
+    if (!tab) return;
+    const selects = tab.querySelectorAll('select');
+    let changed = false;
+    
+    selects.forEach(select => {
+        // Find "OK" or "Đạt" or "Normal" value
+        const targetValue = Array.from(select.options).find(opt => 
+            opt.value === 'OK' || opt.value === 'Đạt' || opt.value === 'Normal'
+        );
+        
+        if (targetValue && select.value !== targetValue.value) {
+            select.value = targetValue.value;
+            // Apply color immediately
+            updateSelectColor(select);
+            // Trigger change for data binding
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            changed = true;
+        }
+    });
+    
+    if (changed) {
+        updateSidebarStatus();
+        showToast('Đã chọn thành công tất cả hạng mục là: Đạt');
+    } else {
+        showToast('Tất cả đã ở trạng thái Đạt!');
+    }
+}
+
+/**
+ * Update select color based on value
+ */
+function updateSelectColor(select) {
+    const val = select.value;
+    select.classList.remove('status-ok', 'status-nok');
+    if (val === 'OK' || val === 'Đạt' || val === 'Normal') {
+        select.classList.add('status-ok');
+    } else if (val === 'Not OK' || val === 'Không Đạt' || val === 'Nok') {
+        select.classList.add('status-nok');
+    }
+}
+
+// Global listener for select colors
+document.addEventListener('change', (e) => {
+    if (e.target.tagName === 'SELECT') {
+        updateSelectColor(e.target);
+    }
+});
 
 // Data Binding utility
 function bindDataToForm(data) {
@@ -103,6 +168,10 @@ function bindDataToForm(data) {
         const value = getNestedValue(data, path);
         if (value !== undefined && value !== null) {
             input.value = value;
+            // Apply color if it's a select
+            if (input.tagName === 'SELECT') {
+                updateSelectColor(input);
+            }
         }
     });
 }
@@ -186,7 +255,10 @@ function evaluateEarthResistance(index, value) {
     const val = parseFloat(value);
     
     let evaluation = "";
-    if (!isNaN(val)) {
+    if (isNaN(val) || value === "") {
+        evalSpan.textContent = "";
+        evalSpan.className = "ml-2 text-xs font-bold";
+    } else {
         if (val <= 4) {
             evaluation = "Đạt";
             evalSpan.textContent = "Đạt";
@@ -196,8 +268,6 @@ function evaluateEarthResistance(index, value) {
             evalSpan.textContent = "Không Đạt";
             evalSpan.className = "ml-2 text-xs font-bold text-red-600";
         }
-    } else {
-        evalSpan.textContent = "";
     }
 
     // Sync to Section 12 Summary (Item 7 = index 6)
@@ -210,15 +280,14 @@ function evaluateEarthResistance(index, value) {
             } else if (evaluation === "Không Đạt") {
                 summaryDesc.value = "Hệ thống tiếp địa không đạt tiêu chuẩn (> 4Ω)";
             } else {
-                summaryDesc.value = "Không";
+                summaryDesc.value = "";
             }
         }
     }
 }
 
-
-
 // Upload Logic
+const uploadBtn = document.getElementById('uploadBtn');
 if (uploadBtn) {
     uploadBtn.addEventListener('click', uploadFiles);
 }
@@ -233,9 +302,14 @@ async function uploadFiles() {
     // Generate the report with or without BMT files
 
     
-    statusDiv.style.display = 'flex';
-    statusDiv.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span> <span>Đang xử lý... Vui lòng đợi trong giây lát...</span>';
-    statusDiv.className = 'status processing';
+    if (statusDiv) {
+        statusDiv.classList.remove('hidden');
+        statusDiv.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span> <span>Đang xử lý... Vui lòng đợi trong giây lát...</span>';
+        statusDiv.className = 'status processing';
+    } else {
+        showToast('Đang khởi tạo tạo báo cáo... Vui lòng đợi...');
+    }
+    
     uploadBtn.disabled = true;
     uploadBtn.innerHTML = '⏳ Processing...';
 
@@ -308,20 +382,34 @@ async function uploadFiles() {
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
-            statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> <span>Tạo báo cáo thành công! Tải xuống đang bắt đầu.</span>';
-            statusDiv.className = 'status success';
+            if (statusDiv) {
+                statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> <span>Tạo báo cáo thành công! Tải xuống đang bắt đầu.</span>';
+                statusDiv.className = 'status success';
+                // Auto-hide success after 5 seconds
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                    statusDiv.classList.remove('status', 'success');
+                }, 5000);
+            }
+            showToast('Tạo báo cáo thành công!');
         } else {
             const errorText = await response.text();
-            statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi server: ' + errorText + '</span>';
-            statusDiv.className = 'status error';
+            if (statusDiv) {
+                statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi server: ' + errorText + '</span>';
+                statusDiv.className = 'status error';
+            }
+            showToast('Lỗi server: ' + errorText, 'error');
         }
     } catch (error) {
         console.error(error);
-        statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi kết nối: Không thể gửi yêu cầu lên server.</span>';
-        statusDiv.className = 'status error';
+        if (statusDiv) {
+            statusDiv.innerHTML = '<span class="material-symbols-outlined text-[18px]">error</span> <span>Lỗi kết nối: ' + error.message + '</span>';
+            statusDiv.className = 'status error';
+        }
+        showToast('Lỗi kết nối: ' + error.message, 'error');
     } finally {
         uploadBtn.disabled = false;
-        uploadBtn.innerHTML = 'Xuất File PDF (Generate Report)'; // Reset text
+        uploadBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> <span class="relative z-10">Xuất báo cáo PDF</span>'; 
     }
 }
 
@@ -344,6 +432,11 @@ function handleDynamicThermalImages(input, containerId) {
     // Append new files to our global state
     window.dynamicThermalFiles[category] = window.dynamicThermalFiles[category].concat(newFiles);
     
+    // Warning for even numbers (layout issue)
+    if (window.dynamicThermalFiles[category].length % 2 === 0) {
+        showToast('Cảnh báo: Số lượng ảnh đang là số chẵn. Nên chọn số lẻ (1, 3, 5...) để tránh lỗi layout nhận xét dính footer.');
+    }
+
     // Clear input value so same files can be selected again if needed
     input.value = '';
 
@@ -385,7 +478,7 @@ function renderDynamicThermalGrid(category, containerId) {
 
     files.forEach((file, index) => {
         const itemBox = document.createElement('div');
-        itemBox.className = 'relative border border-slate-200 rounded-xl overflow-hidden group shadow-sm bg-slate-50 flex items-center justify-center min-h-[120px]';
+        itemBox.className = 'thermal-item-box relative border border-slate-200 rounded-xl overflow-hidden group shadow-sm bg-slate-50 flex items-center justify-center min-h-[120px]';
 
         // Check if it's an image we can preview
         const isImage = file.type.startsWith('image/');
@@ -422,38 +515,130 @@ function renderDynamicThermalGrid(category, containerId) {
         itemBox.appendChild(delBtn);
         container.appendChild(itemBox);
     });
+    updateSidebarStatus();
 }
 
 // ==========================================
 // Signature Upload Logic (Section 13)
 // ==========================================
-function handleSignatureUpload(input) {
+async function handleSignatureUpload(input) {
     const file = input.files[0];
     if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        showToast('File quá lớn. Vui lòng chọn file dưới 2MB.', 'error');
+        input.value = '';
+        return;
+    }
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        window.technicianSignatureBase64 = base64; // Store base64 string globally
+        
         const previewImg = document.getElementById('sigPreviewImg');
         const previewContainer = document.getElementById('sigPreviewContainer');
         const uploadBox = document.getElementById('sigUploadBox');
         
-        previewImg.src = e.target.result;
+        previewImg.src = base64;
         previewContainer.classList.remove('hidden');
         uploadBox.classList.add('hidden');
         showToast('Đã tải lên chữ ký kỹ thuật viên.');
     };
     reader.readAsDataURL(file);
+    updateSidebarStatus();
 }
 
 function removeSignature() {
-    const input = document.getElementById('signatureInput');
-    const previewContainer = document.getElementById('sigPreviewContainer');
-    const uploadBox = document.getElementById('sigUploadBox');
-    const previewImg = document.getElementById('sigPreviewImg');
-    
-    input.value = '';
-    if (previewImg) previewImg.src = '';
-    previewContainer.classList.add('hidden');
-    uploadBox.classList.remove('hidden');
+    window.technicianSignatureBase64 = null;
+    document.getElementById('signatureInput').value = '';
+    document.getElementById('sigPreviewContainer').classList.add('hidden');
+    document.getElementById('sigUploadBox').classList.remove('hidden');
+    updateSidebarStatus();
 }
 
+// Client Signature Handling
+async function handleClientSignatureUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('File quá lớn. Vui lòng chọn file dưới 2MB.', 'error');
+        input.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        window.clientSignatureBase64 = base64;
+        
+        const previewImg = document.getElementById('clientSigPreviewImg');
+        const previewContainer = document.getElementById('clientSigPreviewContainer');
+        const uploadBox = document.getElementById('clientSigUploadBox');
+        
+        previewImg.src = base64;
+        previewContainer.classList.remove('hidden');
+        uploadBox.classList.add('hidden');
+        
+        showToast('Đã tải lên chữ ký khách hàng.');
+    };
+    reader.readAsDataURL(file);
+    updateSidebarStatus();
+}
+
+function removeClientSignature() {
+    window.clientSignatureBase64 = null;
+    document.getElementById('clientSignatureInput').value = '';
+    document.getElementById('clientSigPreviewContainer').classList.add('hidden');
+    document.getElementById('clientSigUploadBox').classList.remove('hidden');
+    updateSidebarStatus();
+}
+
+// ==========================================
+// Sidebar Status Completion Logic
+// ==========================================
+function updateSidebarStatus() {
+    const tabs = document.querySelectorAll('.tab-pane');
+    tabs.forEach(tab => {
+        const tabId = tab.id.replace('tab-', '');
+        const navItem = document.querySelector(`[data-tab="tab-${tabId}"]`);
+        if (!navItem) return;
+        const dot = navItem.querySelector('.node-dot');
+        if (!dot) return;
+
+        let filledCount = 0;
+
+        // 1. Check all standard inputs/selects/textareas
+        const inputs = tab.querySelectorAll('input:not([type="file"]), select, textarea');
+        inputs.forEach(input => {
+            const val = input.value?.trim() || '';
+            // Only count as "filled" if it's not the default "Normal" or empty
+            if (val !== '' && val !== 'Normal' && val !== 'N/A') {
+                filledCount++;
+            }
+        });
+
+        // 2. Section-specific checks
+        if (tabId === '10') { // Thermal Analysis
+            const images = tab.querySelectorAll('.thermal-item-box');
+            if (images.length > 0) filledCount += 1;
+        }
+
+        if (tabId === '11') { // Earth Resistance
+            const earthInputs = tab.querySelectorAll('input[type="number"]');
+            earthInputs.forEach(i => { if (i.value !== '') filledCount++; });
+        }
+
+        if (tabId === '13') { // Signatures
+            if (window.technicianSignatureBase64 || window.clientSignatureBase64) filledCount += 1;
+        }
+
+        // Apply completed class if section has some data
+        if (filledCount > 0) {
+            dot.classList.add('completed');
+        } else {
+            dot.classList.remove('completed');
+        }
+    });
+}

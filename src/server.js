@@ -72,10 +72,15 @@ const start = (portParam, callback) => {
     const portToUse = portParam || PORT;
     const server = app.listen(portToUse, () => {
         const address = server.address();
-        const port = address.port;
-        console.log(`Server running at http://localhost:${port}`);
-        console.log('CLEAN ARCHITECTURE ENABLED');
-        if (callback) callback(port);
+        if (address) {
+            const port = address.port;
+            console.log(`Server running at http://localhost:${port}`);
+            console.log('CLEAN ARCHITECTURE ENABLED');
+            if (callback) callback(port);
+        } else {
+            console.error(`Failed to bind to port ${portToUse}`);
+            process.exit(1);
+        }
     });
     return server;
 };
