@@ -239,6 +239,11 @@ async function compressImage(file, maxWidth = 1600, maxHeight = 1600) {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                
+                // Fill with white to prevent black background for transparent PNGs
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, width, height);
+                
                 ctx.drawImage(img, 0, 0, width, height);
                 canvas.toBlob((blob) => {
                     resolve(blob || file);
@@ -343,6 +348,13 @@ async function uploadFiles() {
     if (sigInput && sigInput.files && sigInput.files[0]) {
         const compressedSig = await compressImage(sigInput.files[0], 800, 800);
         formData.append('signature', compressedSig, 'signature.jpg');
+    }
+
+    // Append Client Signature if present (Compressed)
+    const clientSigInput = document.getElementById('clientSignatureInput');
+    if (clientSigInput && clientSigInput.files && clientSigInput.files[0]) {
+        const compressedClientSig = await compressImage(clientSigInput.files[0], 800, 800);
+        formData.append('clientSignature', compressedClientSig, 'clientSignature.jpg');
     }
 
     // Gather all checklist image proofs (Compressed)

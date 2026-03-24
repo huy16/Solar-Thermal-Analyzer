@@ -12,7 +12,8 @@ class GenerateThermalReport {
         const thermalImages = [];
         const bmtFiles = Array.isArray(files) ? files.filter(f => f.fieldname === 'files') : [];
         const sigFile = Array.isArray(files) ? files.find(f => f.fieldname === 'signature') : null;
-        console.log(`[UseCase] execute: bmtFiles count = ${bmtFiles.length}, signature = ${sigFile ? 'Yes' : 'No'}`);
+        const clientSigFile = Array.isArray(files) ? files.find(f => f.fieldname === 'clientSignature') : null;
+        console.log(`[UseCase] execute: bmtFiles count = ${bmtFiles.length}, techSig = ${sigFile ? 'Yes' : 'No'}, clientSig = ${clientSigFile ? 'Yes' : 'No'}`);
 
         for (let i = 0; i < bmtFiles.length; i++) {
             const file = bmtFiles[i];
@@ -168,6 +169,10 @@ class GenerateThermalReport {
                 const sigBase64 = fs.readFileSync(sigFile.path).toString('base64');
                 omData.technicianSignature = `data:${sigFile.mimetype};base64,${sigBase64}`;
             }
+            if (clientSigFile && fs.existsSync(clientSigFile.path)) {
+                const clientSigBase64 = fs.readFileSync(clientSigFile.path).toString('base64');
+                omData.clientSignature = `data:${clientSigFile.mimetype};base64,${clientSigBase64}`;
+            }
             await this.reportService.generateFullReport(omData, categorizedData, reportPath, reportTitle);
         } else {
             await this.reportService.generate(categorizedData, reportPath, reportTitle);
@@ -179,6 +184,7 @@ class GenerateThermalReport {
             cleanup: () => {
                 if (fs.existsSync(reportPath)) fs.unlinkSync(reportPath);
                 if (sigFile && fs.existsSync(sigFile.path)) fs.unlinkSync(sigFile.path);
+                if (clientSigFile && fs.existsSync(clientSigFile.path)) fs.unlinkSync(clientSigFile.path);
                 thermalImages.forEach(img => {
                     if (fs.existsSync(img.thermalImagePath)) fs.unlinkSync(img.thermalImagePath);
                     if (img.realImagePath && fs.existsSync(img.realImagePath)) fs.unlinkSync(img.realImagePath);
