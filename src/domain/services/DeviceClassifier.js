@@ -19,15 +19,21 @@ class DeviceClassifier {
             thresholds: { warning: 70, critical: 90 }
         },
         cabinet: {
-            keywords: ['cabinet', 'inverter', 'combiner', 'box', 'mdb', 'db', 'acb', 'tủ', 'inv'],
-            label: '🗄️ Cabinet / Inverter',
+            keywords: ['cabinet', 'combiner', 'box', 'mdb', 'db', 'acb', 'tá»§', 'dc combiner'],
+            label: '🗄️ Tá»§ Ä‘iá»‡n / AC Cabinet',
             sortOrder: 3,
             thresholds: { warning: 60, critical: 80 }
         },
-        device: {
-            keywords: ['device', 'thiết bị', 'other', 'khác'],
-            label: '🔧 Thiết bị',
+        inverter: {
+            keywords: ['inverter', 'biáº¿n táº§n', 'inv'],
+            label: '🔄 Inverter / Biáº¿n táº§n',
             sortOrder: 4,
+            thresholds: { warning: 60, critical: 80 }
+        },
+        device: {
+            keywords: ['device', 'thiáº¿t bá»‹', 'other', 'khÃ¡c'],
+            label: '🔧 Thiáº¿t bá»‹',
+            sortOrder: 5,
             thresholds: { warning: 50, critical: 70 } // Generic middle-ground thresholds
         }
     };

@@ -8,8 +8,12 @@ class ThermalReportController {
     }
 
     async handleUpload(req, res) {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).send('No files uploaded.');
+        console.log(`[Controller] handleUpload: files count = ${req.files ? req.files.length : 0}`);
+        if (req.files) {
+            req.files.forEach(f => console.log(`  - Field: ${f.fieldname}, Name: ${f.originalname}`));
+        }
+        if ((!req.files || req.files.length === 0) && !req.body.omData) {
+            return res.status(400).send('No files or form data uploaded.');
         }
 
         const tempDir = path.join(os.tmpdir(), 'testo_processing');
@@ -27,7 +31,17 @@ class ThermalReportController {
 
             const reportTitle = req.body.reportTitle || "BÁO CÁO KẾT QUẢ KIỂM TRA NHIỆT";
             const deviceType = req.body.deviceType || "device"; // Default to generic if missing
-            const result = await this.generateThermalReportUseCase.execute(req.files, remarks, conclusions, recommendations, tempDir, reportTitle, deviceType);
+            
+            let omData = null;
+            if (req.body.omData) {
+                try {
+                    omData = JSON.parse(req.body.omData);
+                } catch (e) {
+                    console.error("Failed to parse omData:", e);
+                }
+            }
+
+            const result = await this.generateThermalReportUseCase.execute(req.files, remarks, conclusions, recommendations, tempDir, reportTitle, deviceType, omData);
 
             res.download(result.reportPath, 'Testo_Thermal_Report.pdf', (err) => {
                 if (err) console.error("Error sending file:", err);
@@ -41,6 +55,7 @@ class ThermalReportController {
 
         } catch (error) {
             console.error("Controller Error:", error);
+            fs.appendFileSync('error_log.txt', `[${new Date().toISOString()}] Error: ${error.message}\nStack: ${error.stack}\n\n`);
             res.status(500).send(`Error generating report: ${error.message}\n\nStack: ${error.stack}`);
         }
     }

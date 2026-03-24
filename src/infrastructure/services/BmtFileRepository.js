@@ -123,10 +123,6 @@ class BmtFileRepository extends IBmtRepository {
                     meta.emissivity = buffer.readFloatLE(valueOffset);
                 } else if (name === "ReflectedTemperature") {
                     meta.reflectedTemp = buffer.readFloatLE(valueOffset) - 273.15;
-                } else if (name === "Temp" || name === "Temperature") {
-                    if (!meta.centerTemp) {
-                        meta.centerTemp = buffer.readFloatLE(valueOffset) - 273.15;
-                    }
                 } else if (name === "DateTime") {
                     const ts = buffer.readUInt32LE(valueOffset);
                     if (ts > 946684800 && ts < 2000000000) {
@@ -175,7 +171,8 @@ class BmtFileRepository extends IBmtRepository {
 
                     meta.spots = {
                         hot: getCoords(maxIdx),
-                        cold: getCoords(minIdx)
+                        cold: getCoords(minIdx),
+                        center: { x: 50, y: 50 }
                     };
 
                     meta.rawStats = { minVal, maxVal, rawValues };
@@ -206,6 +203,22 @@ class BmtFileRepository extends IBmtRepository {
 
             // Fallback for date
             if (!meta.dateTime) meta.dateTime = stats.birthtime;
+
+            // Compute Center Temp if not already present
+            if (meta.centerTemp === null && meta.rawStats && meta.tempMin !== null && meta.tempMax !== null) {
+                const pixelCount = meta.rawStats.rawValues.length;
+                const aspect = 4 / 3;
+                const width = Math.round(Math.sqrt(pixelCount * aspect));
+                const height = Math.round(width / aspect);
+                const centerIdx = Math.floor(height / 2) * width + Math.floor(width / 2);
+                
+                const centerRawVal = meta.rawStats.rawValues[centerIdx];
+                const rawRange = meta.rawStats.maxVal - meta.rawStats.minVal;
+                
+                if (rawRange > 0) {
+                    meta.centerTemp = meta.tempMin + ((centerRawVal - meta.rawStats.minVal) / rawRange) * (meta.tempMax - meta.tempMin);
+                }
+            }
 
             // Return Entity
             return new ThermalImage(

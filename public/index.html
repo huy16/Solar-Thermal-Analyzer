@@ -1,86 +1,1343 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html class="light" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Testo Thermal Processor</title>
-    <link rel="icon" type="image/png" href="assets/cps_logo.png">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Solar Report</title>
+    <link rel="icon" type="image/png" href="assets/wrench_favicon.png">
+    
+    <script>
+        if (!sessionStorage.getItem('cas_auth_token')) {
+            window.location.href = '/login.html';
+        }
+    </script>
+    
+    <!-- Alpine.js could be useful but sticking to vanilla JS to match existing architecture -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0055A5",
+                        "primary-container": "#F7931D",
+                        "secondary": "#486176",
+                        "tertiary": "#005151",
+                        "tertiary-fixed": "#a0f0f0",
+                        "tertiary-container": "#036b6b",
+                        "on-tertiary-fixed": "#002020",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "surface": "#faf9fc",
+                        "surface-container": "#eeedf1",
+                        "surface-container-low": "#f4f3f6",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e2e2e5",
+                        "on-surface": "#1a1c1e",
+                        "on-surface-variant": "#424752",
+                        "outline": "#727783",
+                        "outline-variant": "#c2c6d4",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% center' },
+                            '100%': { backgroundPosition: '200% center' },
+                        }
+                    },
+                    animation: {
+                        fadeIn: 'fadeIn 0.4s ease-out forwards',
+                        shimmer: 'shimmer 3s ease-in-out infinite',
+                    }
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Ultra-thin Global Scrollbar */
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .font-headline { font-family: 'Space Grotesk', sans-serif; }
+        
+        /* Sidebar Styling */
+        .nav-item {
+            @apply flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-all duration-200 rounded-lg cursor-pointer;
+        }
+        .nav-item.active {
+            @apply bg-white/80 backdrop-blur-md shadow-sm text-blue-700 font-bold translate-x-1;
+        }
+        .nav-item.export-tab {
+            @apply mt-2 border border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-100;
+        }
+        .nav-item.export-tab.active {
+            @apply bg-blue-600/90 text-white shadow-md border-transparent;
+        }
+        
+        .tab-pane { @apply hidden; }
+        .tab-pane.active { @apply block animate-fadeIn; }
+        
+        /* Premium UI Components */
+        .card-premium {
+            @apply bg-white rounded-2xl p-5 border border-slate-100 shadow-xl shadow-slate-200/50 transition-all duration-300;
+        }
+
+        .input-group-premium {
+            @apply flex flex-col gap-1.5;
+        }
+
+        .input-group-premium label {
+            @apply flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1;
+        }
+
+        .input-group-premium .input-container {
+            @apply relative flex items-center;
+        }
+
+        .input-group-premium .input-icon {
+            @apply absolute left-3 text-slate-400 text-[20px] pointer-events-none transition-colors;
+        }
+
+        .input-group-premium input, 
+        .input-group-premium select,
+        .input-group-premium textarea {
+            @apply w-full pl-10 pr-4 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium transition-all outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10;
+        }
+
+        .input-group-premium input:focus + .input-icon,
+        .input-group-premium select:focus + .input-icon {
+            @apply text-primary;
+        }
+
+        /* Sidebar Grouping */
+        .sidebar-group-label {
+            @apply text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-6 mb-2 px-3 flex items-center gap-2;
+        }
+
+        .sidebar-group-label::after {
+            @apply content-[''] flex-1 h-[1px] bg-slate-200;
+        }
+
+        .nav-item-premium {
+            @apply flex items-center gap-3 px-4 py-3 text-slate-600 hover:text-primary hover:bg-white/80 transition-all duration-200 rounded-xl cursor-pointer font-medium text-[13px] border border-transparent;
+        }
+
+        .nav-item-premium.active {
+            @apply bg-white text-primary border-slate-100 shadow-sm font-bold;
+        }
+
+        .nav-item-premium .icon {
+            @apply text-[20px] transition-transform;
+        }
+
+        .nav-item-premium:hover .icon {
+            @apply scale-110;
+        }
+
+        .nav-item-premium.active .icon {
+            @apply text-primary;
+        }
+        
+        /* Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c2c6d4; border-radius: 10px; }
+        
+        /* Inputs & Uploads */
+        .upload-area {
+            @apply border-2 border-dashed border-outline-variant/60 rounded-xl p-8 cursor-pointer transition-all bg-surface-container-low text-center flex flex-col items-center justify-center;
+        }
+        .upload-area:hover, .upload-area.highlight {
+            @apply border-primary bg-primary/5 -translate-y-1 shadow-md;
+        }
+
+        /* Global Input Overrides for Premium Look */
+        .input-group {
+            @apply flex flex-col gap-1 mb-2;
+        }
+
+        .input-group label {
+            @apply block text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1;
+        }
+
+        /* Base Premium Style for all form controls */
+        .input-group input, 
+        .input-group select, 
+        .input-group textarea,
+        .checklist-item input[type="text"],
+        .checklist-item select,
+        table input[type="text"],
+        table select {
+            @apply bg-slate-50 border border-slate-200 text-sm font-medium transition-all outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 hover:border-primary/40 !important;
+        }
+
+        /* Specific sizing for standalone groups */
+        .input-group input, 
+        .input-group select, 
+        .input-group textarea {
+            @apply w-full px-3 py-1.5 rounded-lg shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] !important;
+        }
+
+        /* Premium Checklist Controls */
+        .checklist-item select {
+            @apply appearance-none bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-3 py-2 pr-8 rounded-xl shadow-sm
+                   hover:border-primary/40 hover:shadow-md
+                   focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none
+                   transition-all duration-200 cursor-pointer !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+        }
+        .checklist-item input[type="text"] {
+            @apply bg-slate-50/80 border border-slate-200 text-xs font-medium text-slate-700 px-3 py-2 rounded-xl
+                   placeholder:text-slate-400 placeholder:font-normal
+                   hover:border-primary/30 hover:bg-white
+                   focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none focus:shadow-sm
+                   transition-all duration-200 !important;
+        }
+        table input[type="text"],
+        table select {
+            @apply px-2 py-1.5 rounded-lg shadow-sm !important;
+        }
+
+        /* Premium Table UI (Section 12) */
+        table {
+            @apply border-separate border-spacing-y-1 border-spacing-x-0 border-none w-full !important;
+        }
+        table thead tr {
+            @apply border-none bg-transparent !important;
+        }
+        table thead th {
+            @apply bg-slate-100/50 text-[10px] font-bold uppercase tracking-widest text-slate-500 py-2 px-3 first:rounded-l-xl last:rounded-r-xl border-none !important;
+        }
+        table tbody tr {
+            @apply bg-white hover:bg-slate-50 transition-colors shadow-sm ring-1 ring-slate-200/60 rounded-xl border-none !important;
+        }
+        table tbody td {
+            @apply py-2 px-3 first:rounded-l-xl last:rounded-r-xl border-none align-middle !important;
+        }
+        table tbody td:first-child {
+            @apply text-xs !important;
+        }
+        table tbody td:not(:first-child) {
+            @apply text-[11px] !important;
+        }
+        table tbody td:not(:first-child) input,
+        table tbody td:not(:first-child) select {
+            @apply text-[11px] !important;
+        }
+        
+        .checklist-item {
+            @apply flex flex-col md:flex-row gap-2 items-start md:items-center p-3 bg-white border border-slate-100 rounded-xl mb-2 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300;
+        }
+        
+        .btn-camera {
+            @apply cursor-pointer bg-slate-50 text-slate-600 p-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-all flex items-center justify-center border border-slate-200;
+        }
+        
+        .preview-img {
+            @apply w-10 h-10 object-cover rounded-lg border border-slate-200 shadow-sm;
+        }
+
+        /* Standardize checklist controls alignment and widths */
+        @media (min-width: 768px) {
+            /* Target the right-side control container in each checklist item */
+            .checklist-item > div:nth-child(2) {
+                width: 420px;
+                flex-shrink: 0;
+                justify-content: flex-end;
+            }
+            
+            /* Make the Ghi chÃƒÂº (remarks) input fill the available space in the fixed-width container */
+            .checklist-item > div:nth-child(2) input[type="text"] {
+                flex: 1;
+                width: auto !important;
+            }
+
+            /* Add a placeholder if the camera button is missing to keep alignment perfect */
+            .checklist-item > div:nth-child(2):not(:has(.btn-camera))::after {
+                content: '';
+                width: 48px; /* Approximate width of btn-camera including padding/border */
+                flex-shrink: 0;
+            }
+        }
+    </style>
 </head>
 
-<body>
-    <div class="background-animation"></div>
-    <div class="container">
-        <div class="card">
-            <div class="logo-header">
-                <img src="assets/cps_logo.png" alt="CPS Logo" class="app-logo" style="height: 140px; width: auto;">
-                <h1 style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17Z"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M12 1V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M12 21V23" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M4.22 4.22L5.64 5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M18.36 18.36L19.78 19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M1 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M21 12H23" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M4.22 19.78L5.64 18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M18.36 5.64L19.78 4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                    </svg>
-                    Solar Thermal Analyzer
-                </h1>
-                <p class="subtitle">PV System Inspection Tool</p>
+<body class="bg-surface text-on-surface relative flex h-screen overflow-hidden">
+    
+    <!-- SideNavBar (13 sections) -->
+    <aside class="w-72 h-full flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col p-4 gap-2 font-headline tracking-tight z-50">
+        <div class="mb-4 px-2 flex items-center gap-3">
+            <img src="assets/cas_full_logo.png" alt="CAS Logo" class="h-10 object-contain">
+            <div>
+                <h1 class="text-base font-bold text-slate-900 leading-tight block truncate w-40">SOLAR REPORT</h1>
+                <p class="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">13-Step O&M System</p>
+            </div>
+        </div>
+
+        <nav class="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-2 pt-2 pb-6 relative select-none" id="stepperNav">
+            <!-- Connecting Line for Stepper -->
+            <div class="absolute left-[26px] top-4 bottom-16 w-[2px] bg-slate-200 z-0 hidden md:block"></div>
+
+            <!-- Group I -->
+            <div class="stepper-group" data-group="1">
+                <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-surface" onclick="toggleGroup(1)">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shadow-md border-2 border-white z-10 transition-colors stepper-node">1</div>
+                        <span class="font-bold text-[13px] text-slate-800 uppercase tracking-wide">I. Khởi tạo</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300 transform rotate-180" id="icon-group-1">expand_more</span>
+                </div>
+                <!-- Content is expanded by default for group 1 -->
+                <div class="stepper-group-content flex flex-col gap-1 pl-12 pr-2 transition-all duration-300 origin-top overflow-hidden" id="content-group-1" style="max-height: 200px; opacity: 1; padding-top: 8px; padding-bottom: 8px;">
+                    <div class="nav-item-premium active relative group" data-tab="tab-1">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">1. Thông tin dự án</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-2">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">2. Thiết bị đo kiểm</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="input-group">
-                <label for="reportTitle">Project / Report Title</label>
-                <input type="text" id="reportTitle" placeholder="e.g. Solar Farm Inspection - Zone A">
+            <!-- Group II -->
+            <div class="stepper-group mt-1" data-group="2">
+                <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(2)">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">2</div>
+                        <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">II. Hệ thống PV</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-2">expand_more</span>
+                </div>
+                <!-- Collapsed by default -->
+                <div class="stepper-group-content flex flex-col gap-1 pl-12 pr-2 transition-all duration-300 origin-top overflow-hidden" id="content-group-2" style="max-height: 0px; opacity: 0; padding-top: 0; padding-bottom: 0;">
+                    <div class="nav-item-premium relative group" data-tab="tab-3">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">3. Pin năng lượng</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-4">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">4. Khung giá đỡ PV</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="input-group">
-                <label for="deviceType">Loại thiết bị (Device Category)</label>
-                <select id="deviceType" class="category-select">
-                    <option value="solar_panel">🔆 PV Panel (Pin mặt trời)</option>
-                    <option value="cable">🔌 AC/DC Cable (Cáp/Điểm đấu nối)</option>
-                    <option value="cabinet">🗄️ Cabinet/Inverter (Tủ / Biến tần)</option>
-                    <option value="device">🔧 Thiết bị chung (Generic)</option>
-                </select>
+            <!-- Group III -->
+            <div class="stepper-group mt-1" data-group="3">
+                <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(3)">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">3</div>
+                        <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">III. Inverter & Điện</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-3">expand_more</span>
+                </div>
+                <div class="stepper-group-content flex flex-col gap-1 pl-12 pr-2 transition-all duration-300 origin-top overflow-hidden" id="content-group-3" style="max-height: 0px; opacity: 0; padding-top: 0; padding-bottom: 0;">
+                    <div class="nav-item-premium relative group" data-tab="tab-5">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">5. Tủ điện AC Solar</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-6">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">6. Biến tần (Inverter)</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-7">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">7. Khung giá đỡ Tủ AC/Inverter</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-8">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">8. Máng cáp & Ruột gà</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="upload-area" id="drop-area">
-                <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
-                    </path>
-                </svg>
-
-                <div class="upload-hint">Drag & Drop .BMT files</div>
-                <div class="upload-subhint">Device category is assigned manually above</div>
-
-                <input type="file" id="fileElem" multiple accept=".BMT" class="file-input"
-                    onchange="handleFiles(this.files)">
+            <!-- Group IV -->
+            <div class="stepper-group mt-1" data-group="4">
+                <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(4)">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">4</div>
+                        <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">IV. Kết cấu & Đo kiểm</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-4">expand_more</span>
+                </div>
+                <div class="stepper-group-content flex flex-col gap-1 pl-12 pr-2 transition-all duration-300 origin-top overflow-hidden" id="content-group-4" style="max-height: 0px; opacity: 0; padding-top: 0; padding-bottom: 0;">
+                    <div class="nav-item-premium relative group" data-tab="tab-9">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">9. Kết cấu mái</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-10">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">10. Ảnh nhiệt nhiệt độ</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-11">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">11. Điện trở nối đất</span>
+                    </div>
+                </div>
             </div>
 
-            <div id="file-count"></div>
-            <div id="file-list"></div>
-            <button id="uploadBtn" class="button">Generate Thermal Report</button>
-            <div id="status"></div>
+            <!-- Group V -->
+            <div class="stepper-group mt-1" data-group="5">
+                <div class="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors z-10 relative bg-slate-50 group-header" onclick="toggleGroup(5)">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white z-10 transition-colors stepper-node">5</div>
+                        <span class="font-bold text-[13px] text-slate-700 uppercase tracking-wide group-title">V. Tổng kết</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-sm transition-transform duration-300" id="icon-group-5">expand_more</span>
+                </div>
+                <div class="stepper-group-content flex flex-col gap-1 pl-12 pr-2 transition-all duration-300 origin-top overflow-hidden" id="content-group-5" style="max-height: 0px; opacity: 0; padding-top: 0; padding-bottom: 0;">
+                    <div class="nav-item-premium relative group" data-tab="tab-12">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">12. Đánh giá chung</span>
+                    </div>
+                    <div class="nav-item-premium relative group" data-tab="tab-13">
+                        <div class="absolute -left-7 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white z-10 node-dot transition-colors"></div>
+                        <span class="text-[13px] font-medium group-hover:text-primary transition-colors">13. Cập nhật & Xuất Báo Cáo</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
 
-            <div class="footer-brand">Powered by CPS Technology</div>
+        <button onclick="logout()" class="mt-auto flex items-center justify-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors border border-red-100 mb-2">
+            <span class="material-symbols-outlined text-[16px]">logout</span> Đăng xuất
+        </button>
+    </aside>
+
+    <!-- Content Area (Header + Main) -->
+    <div class="flex-1 flex flex-col h-full right-0 relative z-0">
+        <!-- TopNavBar -->
+        <header class="bg-white/90 backdrop-blur-xl border-b border-slate-100 flex justify-between items-center px-8 h-16 shadow-sm z-40">
+            <div class="flex items-center gap-3">
+                <span class="font-black text-blue-800 font-headline uppercase tracking-wider text-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-accent" style="color: #f97316;">wb_sunny</span>
+                    CAS Energy Solutions
+                </span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-tertiary/10 rounded-full">
+                    <div class="w-2 h-2 rounded-full bg-tertiary"></div>
+                    <span class="text-[10px] font-bold text-tertiary uppercase tracking-tighter">System: Online</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-4 bg-surface">
+            <form id="omForm" class="max-w-5xl mx-auto pb-10">
+                
+                <!-- TAB 1: PROJECT INFO -->
+                <div class="tab-pane active" id="tab-1">
+                    <!-- Animated Header -->
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">solar_power</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">1. Thông tin dự án</h2>
+                                <p class="text-white/70 text-[10px]">Thông tin chung về khách hàng và nhà máy</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Single Compact Card -->
+                    <div class="bg-white rounded-xl border border-slate-100 shadow-lg shadow-slate-200/40 overflow-hidden">
+                        
+                        <!-- Report Title Row -->
+                        <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-100">
+                            <div class="input-group-premium">
+                                <label><span class="material-symbols-outlined text-[13px]">description</span> Tên Báo Cáo / Report Title</label>
+                                <div class="input-container">
+                                    <span class="material-symbols-outlined input-icon">edit_note</span>
+                                    <input type="text" id="reportTitle" value="BIÊN BẢN KIỂM TRA – BẢO TRÌ – BẢO DƯỠNG">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Two-column body -->
+                        <div class="grid grid-cols-1 md:grid-cols-2">
+                            <!-- Left Column -->
+                            <div class="px-4 py-3 flex flex-col gap-2 border-r border-slate-100">
+                                <h3 class="text-[9px] font-black uppercase tracking-[0.15em] text-primary/60 flex items-center gap-1.5"><span class="material-symbols-outlined text-[13px]">apartment</span> Khách hàng & Địa điểm</h3>
+                                
+                                <div class="input-group-premium">
+                                    <label>Dự án / Project</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">solar_power</span>
+                                        <input type="text" data-path="projectInfo.projectName">
+                                    </div>
+                                </div>
+                                <div class="input-group-premium">
+                                    <label>Khách hàng / Customer</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">badge</span>
+                                        <input type="text" data-path="projectInfo.customer">
+                                    </div>
+                                </div>
+                                <div class="input-group-premium">
+                                    <label>Địa chỉ / Location</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">map</span>
+                                        <input type="text" data-path="projectInfo.location">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column -->
+                            <div class="px-4 py-3 flex flex-col gap-2">
+                                <h3 class="text-[9px] font-black uppercase tracking-[0.15em] text-primary/60 flex items-center gap-1.5"><span class="material-symbols-outlined text-[13px]">settings</span> Thông số hệ thống</h3>
+                                
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="input-group-premium">
+                                        <label>Công suất / Cap.</label>
+                                        <div class="input-container">
+                                            <span class="material-symbols-outlined input-icon">bolt</span>
+                                            <input type="text" data-path="projectInfo.capacity">
+                                        </div>
+                                    </div>
+                                    <div class="input-group-premium">
+                                        <label>Ngày COD</label>
+                                        <div class="input-container">
+                                            <span class="material-symbols-outlined input-icon">event_available</span>
+                                            <input type="text" data-path="projectInfo.codDate">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="input-group-premium">
+                                    <label>Lần kiểm tra / Insp. No</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">numbers</span>
+                                        <input type="text" data-path="projectInfo.inspectionNo" placeholder="VD: Định kỳ lần 2">
+                                    </div>
+                                </div>
+                                <div class="input-group-premium">
+                                    <label>Ngày thực hiện / Date</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">today</span>
+                                        <input type="text" data-path="projectInfo.inspectionDate">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: Team info -->
+                        <div class="px-4 py-2.5 bg-slate-50/70 border-t border-slate-100">
+                            <h3 class="text-[9px] font-black uppercase tracking-[0.15em] text-primary/60 mb-1.5 flex items-center gap-1.5"><span class="material-symbols-outlined text-[13px]">groups</span> Đội ngũ thực hiện</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div class="input-group-premium">
+                                    <label>Công ty thực hiện</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">apartment</span>
+                                        <input type="text" data-path="projectInfo.inspectionCompany">
+                                    </div>
+                                </div>
+                                <div class="input-group-premium">
+                                    <label>Kỹ thuật viên / Technicians</label>
+                                    <div class="input-container">
+                                        <span class="material-symbols-outlined input-icon">person_search</span>
+                                        <input type="text" data-path="projectInfo.technicians">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: EQUIPMENT -->
+                <div class="tab-pane" id="tab-2">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">build</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">2. Thiết bị đo kiểm</h2>
+                                <p class="text-white/70 text-[10px]">Equipment & Instruments</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <div class="bg-green-50/50 p-4 rounded-xl border-l-4 border-green-500 flex items-center gap-4">
+                            <span class="material-symbols-outlined text-[32px] text-green-500">verified</span>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm">Dữ liệu thiết bị sẽ được điền tự động</h4>
+                                <p class="text-[12px] text-slate-600">Báo cáo sẽ tự động chèn hình ảnh và thông số của các thiết bị chuẩn như Testo 871, Hioki IR4053-10, Kyoritsu 4105A, VOM, và cờ lê lực Kingtony.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PV SYSTEM -->
+                <div class="tab-pane" id="tab-3">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">solar_power</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">3. Hệ thống tấm pin năng lượng mặt trời</h2>
+                                <p class="text-white/70 text-[10px]">PV Panel System</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Thông số kỹ thuật / <span class="italic">Specifications</span></h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="input-group"><label>Hãng sản xuất / <span class="italic">Manufacturer</span></label><input type="text" data-path="pvSystem.specs.manufacturer"></div>
+                            <div class="input-group"><label>Số lượng tấm / <span class="italic">Panel qty</span></label><input type="text" data-path="pvSystem.specs.panelQty"></div>
+                            <div class="input-group"><label>Model tấm pin / <span class="italic">Panel model</span></label><input type="text" data-path="pvSystem.specs.panelModel"></div>
+                            <div class="input-group"><label>Công suất / <span class="italic">Capacity (Wp)</span></label><input type="text" data-path="pvSystem.specs.capacity"></div>
+                            <div class="input-group"><label>Ngày lắp đặt / <span class="italic">Install date</span></label><input type="text" data-path="pvSystem.specs.installDate"></div>
+                            <div class="input-group"><label>Bảo hành / <span class="italic">Warranty</span></label><input type="text" data-path="pvSystem.specs.warranty"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Hạng mục kiểm tra / <span class="italic text-slate-500">Inspection Items</span></h3>
+                        
+                        <div class="mb-4"><h4 class="text-sm font-bold text-slate-700">Kiểm tra bên ngoài <span class="italic text-slate-500 font-normal">(External visual inspection)</span></h4></div>
+                        
+                        <div class="checklist-item">
+                            <div class="flex-1">
+                                <p class="text-[13px] font-semibold text-slate-800 tracking-tight">3.1. Chụp ảnh tổng quan mảng pin</p>
+                                <p class="text-[11px] text-slate-500 italic">Overall PV array photo</p>
+                            </div>
+                            <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="pvSystem.checklist.0.status">
+                                    <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
+                                </select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.0.remarks">
+                            </div>
+                        </div>
+
+                        <div class="checklist-item">
+                            <div class="flex-1">
+                                <p class="text-[13px] font-semibold text-slate-800 tracking-tight">3.2. Kiểm tra tấm pin vỡ, trầy xước, bong tróc</p>
+                                <p class="text-[11px] text-slate-500 italic">Check cracked, scratched, delaminated panels</p>
+                            </div>
+                            <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="pvSystem.checklist.1.status">
+                                    <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
+                                </select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.1.remarks">
+                            </div>
+                        </div>
+
+                        <div class="checklist-item">
+                            <div class="flex-1">
+                                <p class="text-[13px] font-semibold text-slate-800 tracking-tight">3.3. Kiểm tra khung nhôm tấm pin (cong vênh, han gỉ)</p>
+                                <p class="text-[11px] text-slate-500 italic">Check panel frame (deformation, corrosion)</p>
+                            </div>
+                            <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="pvSystem.checklist.2.status">
+                                    <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
+                                </select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.2.remarks">
+                            </div>
+                        </div>
+
+                        <div class="checklist-item">
+                            <div class="flex-1">
+                                <p class="text-[13px] font-semibold text-slate-800 tracking-tight">3.4. Kiểm tra dây nối/đầu nối MC4 tấm pin</p>
+                                <p class="text-[11px] text-slate-500 italic">Check MC4 connector condition</p>
+                            </div>
+                            <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="pvSystem.checklist.3.status">
+                                    <option value="OK">Đạt</option><option value="Not OK">Không Đạt</option>
+                                </select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.checklist.3.remarks">
+                            </div>
+                        </div>
+
+                        <div class="mt-8 border-t border-slate-100 pt-6">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Kiểm tra nhiệt độ / <span class="italic">Thermal check</span></h3>
+                            <div class="checklist-item">
+                                <div class="flex-1">
+                                    <p class="text-[13px] font-semibold text-slate-800 tracking-tight">3.5. Quét nhiệt tổng quan toàn bộ mảng pin (≤ 65°C)</p>
+                                    <p class="text-[11px] text-slate-500 italic">Full array thermal scan (≤ 65°C) - Thiết bị: Testo 871</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <select class="w-28 text-sm" data-path="pvSystem.thermalCheck.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                    <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="pvSystem.thermalCheck.0.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <!-- TAB 4: KHUNG GIÁ ĐỠ PV -->
+                <div class="tab-pane" id="tab-4">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">roofing</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">4. Khung giá đỡ PV</h2>
+                                <p class="text-white/70 text-[10px]">PV Mounting Structure</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="input-group"><label>Loại kết cấu / Structure type</label><input type="text" data-path="mountingStructure.specs.type"></div>
+                            <div class="input-group"><label>Chất liệu / Material</label><input type="text" data-path="mountingStructure.specs.material"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan & chi tiết khung giá đỡ</p><p class="text-[11px] text-slate-500 italic">Overall and detailed photo of mounting structure</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Siết lực ốc kẹp biên (end clamp) – theo torque nhà SX</p><p class="text-[11px] text-slate-500 italic">End clamp torque check – per manufacturer spec</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.1.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Siết lực ốc kẹp giữa (mid clamp) – theo torque nhà SX</p><p class="text-[11px] text-slate-500 italic">Mid clamp torque check – per manufacturer spec</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.2.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.2.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra ống ruột gà đi dây cáp DC trên mái</p><p class="text-[11px] text-slate-500 italic">DC cable conduit on roof</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.3.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra kẹp dây DC & cố định đầu nối MC4</p><p class="text-[11px] text-slate-500 italic">DC cable clamps & MC4 connector fixation</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="mountingStructure.checklist.4.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="mountingStructure.checklist.4.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: TỦ ĐIỆN AC SOLAR -->
+                <div class="tab-pane" id="tab-5">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">ev_station</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">5. Tủ điện AC Solar</h2>
+                                <p class="text-white/70 text-[10px]">Solar AC Cabinet</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="input-group"><label>Hãng sản xuất / Manufacturer</label><input type="text" data-path="acCabinet.specs.manufacturer"></div>
+                            <div class="input-group"><label>Model</label><input type="text" data-path="acCabinet.specs.model"></div>
+                            <div class="input-group"><label>Số lượng CB / CB Qty</label><input type="text" data-path="acCabinet.specs.cbQty"></div>
+                            <div class="input-group"><label>IP Rating</label><input type="text" data-path="acCabinet.specs.ipRating"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">flash_on</span>Kiểm tra CÓ ĐIỆN / <span class="italic text-slate-500 font-normal">Energized inspection</span></h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan & chi tiết thiết bị trong tủ</p><p class="text-[11px] text-slate-500 italic">Overall & detail photo of cabinet interior</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra trạng thái / cơ hoạt động từng thiết bị điện</p><p class="text-[11px] text-slate-500 italic">Check status indicator of each electrical device</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh chi tiết nếu phát hiện hoạt động bất thường</p><p class="text-[11px] text-slate-500 italic">Detail photo if abnormal operation found</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.2.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.2.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Quét nhiệt tủ AC Solar (≤ 65°C tại điểm đấu nối)</p><p class="text-[11px] text-slate-500 italic">Thermal scan of AC cabinet (≤ 65°C at terminals)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.3.remarks">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">power_off</span>Kiểm tra KHÔNG ĐIỆN / <span class="italic text-slate-500 font-normal">De-Energized inspection</span></h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.4. Kiểm tra, siết lực các đầu nối điện (MCCB, MCB, Terminal)</p><p class="text-[11px] text-slate-500 italic">Check & torque electrical terminals (MCCB, MCB, Terminal)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.5. Đo điện trở cách điện (Hioki IR4053-10 - ≥ 1 MΩ)</p><p class="text-[11px] text-slate-500 italic">Insulation resistance test - ≥ 1 MΩ</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.1.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.6. Đo điện trở nối đất (Kyoritsu 4105A - ≤ 4 Ω)</p><p class="text-[11px] text-slate-500 italic">Earth resistance test - ≤ 4 Ω</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.2.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.2.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.7. Kiểm tra độ kín bụi; xịt foam các lỗ hở trên vỏ tủ</p><p class="text-[11px] text-slate-500 italic">Check dust sealing; foam-seal any openings</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.3.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.8. Vệ sinh bên trong tủ và lưới chắn bụi</p><p class="text-[11px] text-slate-500 italic">Clean interior and dust filter</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.4.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.4.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 6: INVERTER -->
+                <div class="tab-pane" id="tab-6">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">memory</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">6. Biến tần (Inverter)</h2>
+                                <p class="text-white/70 text-[10px]">Inverter System</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="input-group"><label>Hãng sản xuất / <span class="italic">Manufacturer</span></label><input type="text" data-path="inverter.specs.manufacturer"></div>
+                            <div class="input-group"><label>Model</label><input type="text" data-path="inverter.specs.model"></div>
+                            <div class="input-group"><label>Công suất / <span class="italic">Capacity</span></label><input type="text" data-path="inverter.specs.power"></div>
+                            <div class="input-group"><label>Số lượng / <span class="italic">Qty</span></label><input type="text" data-path="inverter.specs.qty"></div>
+                            <div class="input-group"><label>Firmware</label><input type="text" data-path="inverter.specs.firmware"></div>
+                            <div class="input-group"><label>Ngày lắp đặt / <span class="italic">Install Date</span></label><input type="text" data-path="inverter.specs.installDate"></div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">settings_input_component</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra & siết lực đầu đấu nối AC của Inverter</p><p class="text-[11px] text-slate-500 italic">Check & torque AC terminal connections</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.0.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra đầu kết nối MC4 phía DC</p><p class="text-[11px] text-slate-500 italic">Check DC side MC4 connector condition</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.1.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh nhãn string dây DC – kiểm tra ghi chú đúng chuẩn</p><p class="text-[11px] text-slate-500 italic">Clean DC string labels – verify labelling standard</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.2.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.2.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh quạt tản nhiệt (nếu có)</p><p class="text-[11px] text-slate-500 italic">Clean cooling fan (if present)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.3.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.3.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh / quét bụi toàn bộ thân Inverter</p><p class="text-[11px] text-slate-500 italic">Clean / dust inverter body</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.4.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.4.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra log lỗi / cảnh báo trên màn hình Inverter</p><p class="text-[11px] text-slate-500 italic">Check inverter display for error logs / warnings</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.5.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.5.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra portal / app giám sát online</p><p class="text-[11px] text-slate-500 italic">Check online monitoring portal / app</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.6.status"><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.6.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Cập nhật firmware (nếu có phiên bản mới)</p><p class="text-[11px] text-slate-500 italic">Update firmware (if new version available)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="inverter.checklist.7.status"><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.7.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 7, 8, 9: Shortened checklists for these -->
+                <div class="tab-pane" id="tab-7">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">view_module</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">7. Khung giá đỡ Tủ AC/Inverter</h2>
+                                <p class="text-white/70 text-[10px]">AC/Inverter Mounting Frame</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="input-group"><label>Loại kết cấu / Structure type</label><input type="text" data-path="others.mountingFrame.specs.type" value="Liên kết Rail - Ke vuông - Tường"></div>
+                            <div class="input-group"><label>Chất liệu / Material</label><input type="text" data-path="others.mountingFrame.specs.material" value="Nhôm"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Hạng mục kiểm tra</h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra ngoại quan: khung giá đỡ chắc chắn, không cong vênh</p><p class="text-[11px] text-slate-500 italic">Check: frame solid, no deformation</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.mountingFrame.0.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.mountingFrame.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra & siết lực bu-lông liên kết khung – tường</p><p class="text-[11px] text-slate-500 italic">Check & torque frame-to-wall bolts</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.mountingFrame.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.mountingFrame.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh & kiểm tra độ chắc chắn mái che Inverter (nếu có)</p><p class="text-[11px] text-slate-500 italic">Photo & check inverter weather cover (if present)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.mountingFrame.2.status"><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.mountingFrame.2.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab-8">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">cable</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">8. Máng cáp & ống ruột gà</h2>
+                                <p class="text-white/70 text-[10px]">Cable Tray & Conduit (AC / DC)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">Hạng mục kiểm tra</h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra độ kín máng cáp AC & DC</p><p class="text-[11px] text-slate-500 italic">Check sealing of AC & DC cable tray</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.cableTray.0.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Xịt foam làm kín các điểm hở chưa đạt tiêu chuẩn</p><p class="text-[11px] text-slate-500 italic">Foam-seal any non-compliant gaps</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.cableTray.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">8.3. Kiểm tra đầu nối ống ruột gà với máng cáp (không hở, không lỏng)</p><p class="text-[11px] text-slate-500 italic">Check conduit-to-tray joints (no gap, no looseness)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.cableTray.2.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.2.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">8.4. Kiểm tra kẹp dây DC & cố định đầu nối MC4</p><p class="text-[11px] text-slate-500 italic">DC cable clamps & MC4 connector fixation</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.cableTray.3.status"><option value="OK">OK</option><option value="Not OK">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.cableTray.3.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 9: KẾT CẤU MÁI -->
+                <div class="tab-pane" id="tab-9">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">home_work</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">9. Kết cấu mái</h2>
+                                <p class="text-white/70 text-[10px]">Roof Structure</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan xà gồ, vì kèo dưới mái tôn khu vực lắp pin</p><p class="text-[11px] text-slate-500 italic">Photo of purlins & rafters under metal roof at panel area</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.roofStructure.0.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.0.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra mối hàn liên kết cột – vì kèo</p><p class="text-[11px] text-slate-500 italic">Check weld joints between columns and rafters</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.roofStructure.1.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.1.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra ngoại quan độ võng vì kèo</p><p class="text-[11px] text-slate-500 italic">Visual check of rafter deflection</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.roofStructure.2.status"><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.2.remarks">
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra các thanh giằng gia cố (nếu có)</p><p class="text-[11px] text-slate-500 italic">Check reinforcement bracing (if present)</p></div>
+                            <div class="flex items-center gap-2 mt-2 md:mt-0">
+                                <select class="w-28 text-sm" data-path="others.roofStructure.3.status"><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
+                                <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="others.roofStructure.3.remarks">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+    <!-- TAB 10: Thermal Analysis -->
+    <div class="tab-pane" id="tab-10">
+    <div class="relative mb-4 rounded-xl overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+        <div class="relative px-5 py-2.5 flex items-center gap-3">
+            <span class="material-symbols-outlined text-white text-[22px]">thermostat</span>
+            <div>
+                <h2 class="text-base font-headline font-bold text-white tracking-tight">10. Phân tích ảnh nhiệt</h2>
+                <p class="text-white/70 text-[10px]">Thermal Analysis</p>
+            </div>
         </div>
     </div>
-    <script src="script.js?v=6"></script>
-</body>
+        
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">10.1. Khu vực Tấm pin PV (PV Area)</h3>
+                <label class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer rounded-lg text-xs font-bold transition-colors">
+                    <span class="material-symbols-outlined align-middle text-[16px] mr-1">add_a_photo</span> Thêm ảnh
+                    <input type="file" accept="image/*,.BMT" multiple class="hidden" data-category="pv" onchange="handleDynamicThermalImages(this, 'previewContainer-pv')">
+                </label>
+            </div>
+            <!-- Dynamic Grid Container -->
+            <div id="previewContainer-pv" class="grid gap-4 mb-4 grid-cols-1">
+                <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm italic">
+                    Chưa có ảnh nào được chọn.
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Nhận xét / Remarks</label>
+                <textarea class="w-full text-sm resize-none rounded-xl" rows="2" data-path="thermal.pv.remarks" placeholder="Nhập nhận xét về tình trạng nhiệt PV..."></textarea>
+            </div>
+        </div>
 
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">10.2. Tủ AC (AC Cabinet)</h3>
+                <label class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer rounded-lg text-xs font-bold transition-colors">
+                    <span class="material-symbols-outlined align-middle text-[16px] mr-1">add_a_photo</span> Thêm ảnh
+                    <input type="file" accept="image/*,.BMT" multiple class="hidden" data-category="ac" onchange="handleDynamicThermalImages(this, 'previewContainer-ac')">
+                </label>
+            </div>
+            <!-- Dynamic Grid Container -->
+            <div id="previewContainer-ac" class="grid gap-4 mb-4 grid-cols-1">
+                <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm italic">
+                    Chưa có ảnh nào được chọn.
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Nhận xét / Remarks</label>
+                <textarea class="w-full text-sm resize-none rounded-xl" rows="2" data-path="thermal.ac.remarks" placeholder="Nhập nhận xét về tình trạng nhiệt tủ AC..."></textarea>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">10.3. Biến tần (Inverter)</h3>
+                <label class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer rounded-lg text-xs font-bold transition-colors">
+                    <span class="material-symbols-outlined align-middle text-[16px] mr-1">add_a_photo</span> Thêm ảnh
+                    <input type="file" accept="image/*,.BMT" multiple class="hidden" data-category="inverter" onchange="handleDynamicThermalImages(this, 'previewContainer-inverter')">
+                </label>
+            </div>
+            <!-- Dynamic Grid Container -->
+            <div id="previewContainer-inverter" class="grid gap-4 mb-4 grid-cols-1">
+                <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm italic">
+                    Chưa có ảnh nào được chọn.
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Nhận xét / Remarks</label>
+                <textarea class="w-full text-sm resize-none rounded-xl" rows="2" data-path="thermal.inverter.remarks" placeholder="Nhập nhận xét về tình trạng nhiệt Inverter..."></textarea>
+            </div>
+        </div>
+
+
+                    
+
+                </div>
+
+                <!-- TAB 11: Earth Resistance -->
+                <div class="tab-pane" id="tab-11">
+                    <div class="relative mb-4 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2.5 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">grounding</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">11. Đo điện trở nối đất</h2>
+                                <p class="text-white/70 text-[10px]">Earth Resistance Test</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="input-group"><label>Cọc tiếp địa chính (Ω) <span id="er-eval-0" class="ml-2 text-xs font-bold text-green-600">Đạt</span></label><input type="number" step="0.1" data-path="earthResistance.0.value" value="2.5" oninput="evaluateEarthResistance(0, this.value)"></div>
+                            <div class="input-group"><label>Vỏ Inverter (Ω) <span id="er-eval-1" class="ml-2 text-xs font-bold text-green-600">Đạt</span></label><input type="number" step="0.1" data-path="earthResistance.1.value" value="1.2" oninput="evaluateEarthResistance(1, this.value)"></div>
+                            <div class="input-group"><label>Vỏ tủ AC (Ω) <span id="er-eval-2" class="ml-2 text-xs font-bold text-green-600">Đạt</span></label><input type="number" step="0.1" data-path="earthResistance.2.value" value="1.5" oninput="evaluateEarthResistance(2, this.value)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 12: Summary -->
+                <div class="tab-pane" id="tab-12">
+                    <div class="relative mb-2 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">assessment</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">12. Tổng hợp kết quả & Đề xuất</h2>
+                                <p class="text-white/70 text-[10px]">Summary & Recommendations</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-surface-container-lowest rounded-xl p-3 shadow-sm border border-slate-100">
+                        <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-2 flex items-center gap-2">Các hạng mục cần lưu ý</h3>
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="py-1 px-2 font-semibold text-slate-600 text-[10px] uppercase tracking-wider" style="width:26%">Hạng mục</th>
+                                    <th class="py-1 px-2 font-semibold text-slate-600 text-[10px] uppercase tracking-wider" style="width:10%">Mức độ</th>
+                                    <th class="py-1 px-2 font-semibold text-slate-600 text-[10px] uppercase tracking-wider" style="width:32%">Mô tả bất thường</th>
+                                    <th class="py-1 px-2 font-semibold text-slate-600 text-[10px] uppercase tracking-wider" style="width:32%">Đề xuất & Thời hạn</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">1. Pin PV</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.0.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.0.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.0.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">2. Tủ AC Solar</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.1.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.1.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.1.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">3. Biến tần</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.2.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.2.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.2.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">4. Giá đỡ Tủ AC</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.3.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.3.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.3.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">5. Máng cáp & Ống ruột gà</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.4.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.4.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.4.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">6. Kết cấu mái</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.5.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.5.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.5.action" placeholder="Đề xuất..."></td></tr>
+                                <tr class="border-b border-slate-100"><td class="py-1 px-2 font-medium text-slate-800">7. Tiếp địa</td><td class="py-1 px-2"><select class="w-full py-1 px-1.5 border border-slate-200 rounded text-xs" data-path="summary.6.severity"><option value="Thấp">Thấp</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn">Khẩn</option></select></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.6.description" value="Không" placeholder="Mô tả..."></td><td class="py-1 px-2"><input type="text" class="w-full text-xs py-1 px-1.5" data-path="summary.6.action" placeholder="Đề xuất..."></td></tr>
+                            </tbody>
+                        </table>
+
+                        <div class="input-group mt-3">
+                            <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Nhận xét tổng quan (Overall Comments)</label>
+                            <textarea id="overallComments" data-path="overallComments" rows="2" class="w-full bg-surface-container-low border border-slate-200 focus:border-primary text-xs font-medium py-2 px-3 rounded-xl transition-colors resize-y custom-scrollbar" placeholder="Ví dụ: Hệ thống hoạt động bình thường, đề nghị tiếp tục phát điện..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 13: Export -->
+                <div class="tab-pane" id="tab-13">
+                    <div class="relative mb-2 rounded-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-400 via-orange-400 to-blue-600 bg-[length:200%_100%] animate-shimmer opacity-90"></div>
+                        <div class="relative px-5 py-2 flex items-center gap-3">
+                            <span class="material-symbols-outlined text-white text-[22px]">draw</span>
+                            <div>
+                                <h2 class="text-base font-headline font-bold text-white tracking-tight">13. Ký & Xuất Báo Cáo</h2>
+                                <p class="text-white/70 text-[10px]">Review, Sign & Export PDF</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <!-- Signature Upload Card -->
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">draw</span>Chữ ký kỹ thuật viên
+                            </h3>
+                            
+                            <div id="sigPreviewContainer" class="hidden mb-3 w-full flex flex-col items-center">
+                                <img id="sigPreviewImg" class="max-h-24 object-contain bg-slate-50 rounded-xl border border-slate-200 p-2 shadow-sm" src="" alt="Signature Preview">
+                                <button type="button" onclick="removeSignature()" class="mt-2 text-[11px] font-bold text-red-500 uppercase tracking-wider hover:text-red-700 transition-colors flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">delete</span> Xóa chữ ký
+                                </button>
+                            </div>
+
+                            <label id="sigUploadBox" class="w-full py-8 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-primary/5 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2">
+                                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-xl">draw</span>
+                                </div>
+                                <div class="text-xs font-bold text-slate-700">Tải lên chữ ký kỹ thuật</div>
+                                <div class="text-[10px] text-slate-400 font-medium">Hỗ trợ PNG, JPG, JPEG</div>
+                                <input type="file" id="signatureInput" accept="image/*" class="hidden" onchange="handleSignatureUpload(this)">
+                            </label>
+                        </div>
+
+                        <!-- Export Card -->
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
+                            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2">
+                                <span class="material-symbols-outlined text-xl">task_alt</span>
+                            </div>
+                            <h3 class="font-headline font-bold text-[13px] mb-1 text-slate-800">Hoàn tất kiểm tra hệ thống</h3>
+                            <p class="text-slate-500 text-[11px] mb-3 max-w-xs mx-auto leading-relaxed">Vui lòng chắc chắn bạn đã điền đầy đủ các hạng mục và đính kèm hình ảnh minh chứng trước khi xuất dữ liệu.</p>
+                            
+                            <button type="button" id="uploadBtn" class="w-full px-8 bg-gradient-to-br from-primary to-primary-container text-white py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">description</span>
+                                Xuất File PDF (Generate Report)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="status" class="text-xs font-medium px-4 py-3 rounded-xl hidden text-center max-w-2xl mx-auto shadow-sm animate-fadeIn"></div>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-full text-sm font-medium shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-green-400">check_circle</span>
+        <span id="toast-msg">Data loaded!</span>
+    </div>
+
+    <!-- Shared Image Preview Logic for UI UX -->
+    <script>
+        function previewImg(input) {
+            const container = input.closest('.flex');
+            const imgPreview = container.querySelector('.preview-img');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgPreview.src = e.target.result;
+                    imgPreview.classList.remove('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+                
+                // Keep file in global object or depend on form loop to gather it
+                // We'll let script.js query selector find all type=file[data-image-key]
+            } else {
+                imgPreview.classList.add('hidden');
+                imgPreview.src = '';
+            }
+        }
+    </script>
+
+    <script src="script.js?v=13"></script>
+    <script>
+        // Inline Stepper Accordion Logic
+        function toggleGroup(groupId) {
+            const content = document.getElementById(`content-group-${groupId}`);
+            const icon = document.getElementById(`icon-group-${groupId}`);
+            // Check if it's currently closed
+            const isClosed = content.style.opacity === '0' || content.style.maxHeight === '0px';
+            
+            // 1. Close all groups first for true accordion behavior
+            for (let i = 1; i <= 5; i++) {
+                const c = document.getElementById(`content-group-${i}`);
+                const ic = document.getElementById(`icon-group-${i}`);
+                if (c) {
+                    c.style.maxHeight = '0px';
+                    c.style.opacity = '0';
+                    c.style.paddingTop = '0';
+                    c.style.paddingBottom = '0';
+                }
+                if (ic) ic.style.transform = 'rotate(0deg)';
+            }
+
+            // 2. Open the clicked one if it was originally closed
+            if (isClosed && content) {
+                content.style.maxHeight = '500px';
+                content.style.opacity = '1';
+                content.style.paddingTop = '8px';
+                content.style.paddingBottom = '8px';
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Inline logout function
+        function logout() {
+            sessionStorage.removeItem('cas_auth_token');
+            window.location.href = '/login.html';
+        }
+    </script>
+    <style>
+        /* Status classes to interface with script.js */
+        #status.processing { display: block; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        #status.success { display: block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        #status.error { display: block; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        
+        #toast.show { opacity: 1; bottom: 30px; }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+
+        /* Render BMT file list items */
+        .file-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+        .file-name { font-size: 13px; font-weight: 500; color: #1e293b; }
+        .file-status { 
+            font-size: 11px; font-weight: 700; color: #059669; 
+            background: #d1fae5; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+    </style>
+</body>
 </html>

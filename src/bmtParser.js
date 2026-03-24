@@ -121,15 +121,7 @@ function parseBmt(filePath, outputImagePath) {
                 } else {
                     metadata.dateTime = new Date().toISOString().split('T')[0];
                 }
-            } else if (name === "Temp" || name === "Temperature") {
-                // Potential Center Spot or other points. 
-                // We'd need to know if we are inside a MeasurementObject.
-                // For now, let's just grab the FIRST "Temperature" that appears 
-                // (often the main center spot if defined early).
-                if (!metadata.centerTemp) {
-                    const k = buffer.readFloatLE(valueOffset);
-                    metadata.centerTemp = k - 273.15;
-                }
+
             } else if (name === "ReflectedTemperature") {
                 const k = buffer.readFloatLE(valueOffset);
                 metadata.reflectedTemp = k - 273.15;
@@ -141,14 +133,45 @@ function parseBmt(filePath, outputImagePath) {
 
                 let minVal = 65535;
                 let maxVal = -65535;
+                let minIdx = -1;
+                let maxIdx = -1;
                 const rawValues = new Int16Array(pixelCount);
 
                 for (let i = 0; i < pixelCount; i++) {
                     const val = buffer.readInt16LE(dataPayloadStart + i * 2);
                     rawValues[i] = val;
-                    if (val < minVal) minVal = val;
-                    if (val > maxVal) maxVal = val;
+                    if (val < minVal) {
+                        minVal = val;
+                        minIdx = i;
+                    }
+                    if (val > maxVal) {
+                        maxVal = val;
+                        maxIdx = i;
+                    }
                 }
+
+                // Calculate spot positions assuming 240x180 for Testo 871
+                let width = 240;
+                let height = 180;
+                if (pixelCount === 76800) { width = 320; height = 240; }
+                else if (pixelCount === 307200) { width = 640; height = 480; }
+
+                if (minIdx >= 0) {
+                    metadata.spots = metadata.spots || {};
+                    metadata.spots.cold = {
+                        x: ((minIdx % width) / width * 100).toFixed(1),
+                        y: (Math.floor(minIdx / width) / height * 100).toFixed(1)
+                    };
+                }
+                if (maxIdx >= 0) {
+                    metadata.spots = metadata.spots || {};
+                    metadata.spots.hot = {
+                        x: ((maxIdx % width) / width * 100).toFixed(1),
+                        y: (Math.floor(maxIdx / width) / height * 100).toFixed(1)
+                    };
+                }
+                metadata.spots = metadata.spots || {};
+                metadata.spots.center = { x: 50, y: 50 };
 
                 metadata.rawStats = { minVal, maxVal, rawValues };
             }
@@ -189,6 +212,22 @@ function parseBmt(filePath, outputImagePath) {
 
         // Clean up large array
         if (metadata.rawStats) delete metadata.rawStats.rawValues;
+        
+        // Compute Center Temp if not already present
+        if (metadata.centerTemp === null && metadata.rawStats && metadata.tempMin !== null && metadata.tempMax !== null) {
+            const pixelCount = metadata.rawStats.rawValues.length;
+            const aspect = 4 / 3;
+            const width = Math.round(Math.sqrt(pixelCount * aspect));
+            const height = Math.round(width / aspect);
+            const centerIdx = Math.floor(height / 2) * width + Math.floor(width / 2);
+            
+            const centerRawVal = metadata.rawStats.rawValues[centerIdx];
+            const rawRange = metadata.rawStats.maxVal - metadata.rawStats.minVal;
+            
+            if (rawRange > 0) {
+                metadata.centerTemp = metadata.tempMin + ((centerRawVal - metadata.rawStats.minVal) / rawRange) * (metadata.tempMax - metadata.tempMin);
+            }
+        }
 
         return { success: true, metadata };
 

@@ -8,11 +8,14 @@ class GenerateThermalReport {
         this.reportService = reportService;
     }
 
-    async execute(files, remarks, conclusions, recommendations, tempDir, reportTitle, manualCategory) {
+    async execute(files, remarks, conclusions, recommendations, tempDir, reportTitle, manualCategory, omData = null) {
         const thermalImages = [];
+        const bmtFiles = Array.isArray(files) ? files.filter(f => f.fieldname === 'files') : [];
+        const sigFile = Array.isArray(files) ? files.find(f => f.fieldname === 'signature') : null;
+        console.log(`[UseCase] execute: bmtFiles count = ${bmtFiles.length}, signature = ${sigFile ? 'Yes' : 'No'}`);
 
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
+        for (let i = 0; i < bmtFiles.length; i++) {
+            const file = bmtFiles[i];
             const remark = remarks[i] || "";
             const conclusion = conclusions[i] || "";
             const recommendation = recommendations[i] || "";
@@ -24,9 +27,11 @@ class GenerateThermalReport {
                 thermalImage.conclusion = conclusion;
                 thermalImage.recommendation = recommendation;
 
-                // Force user-selected device category. File might still be logged for debugging.
-                const deviceType = manualCategory;
-                thermalImage.deviceType = deviceType;
+                // Only override if a specific manual category is provided (not the default 'device')
+                if (manualCategory && manualCategory !== "device") {
+                    thermalImage.deviceType = manualCategory;
+                }
+                const deviceType = thermalImage.deviceType;
 
                 console.log(`[Auto-Detect] ${file.originalname} → ${DeviceClassifier.getLabel(deviceType)} (max: ${thermalImage.maxTemp}°C, range: ${(parseFloat(thermalImage.maxTemp) - parseFloat(thermalImage.minTemp)).toFixed(1)}°C)`);
 
@@ -109,19 +114,45 @@ class GenerateThermalReport {
             }
         }
 
-        // Sort by category (PV → Cable → Cabinet) then by filename
+        // Sort by category then by filename
         DeviceClassifier.sortByCategory(thermalImages);
+
+        // Group into categories for report service
+        const categories = {};
+        thermalImages.forEach(img => {
+            const type = img.deviceType;
+            if (!categories[type]) {
+                categories[type] = {
+                    categoryTitle: DeviceClassifier.getLabel(type),
+                    items: [],
+                    remarks: img.conclusion || "Há»‡ thá»‘ng hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng, tá»•n hao nhiá»‡t tÆ°Æ¡ng Ä‘á»‘i tháº¥p, khÃ´ng phÃ¡t hiá»‡n rá»§i ro chÃ¡y ná»•."
+                };
+            }
+            categories[type].items.push(img);
+        });
+
+        // Convert to array and maintain sort order
+        const categorizedData = Object.values(categories);
 
         const reportName = `Report_${Date.now()}.pdf`;
         const reportPath = path.join(tempDir, reportName);
 
-        await this.reportService.generate(thermalImages, reportPath, reportTitle);
+        if (omData) {
+            if (sigFile && fs.existsSync(sigFile.path)) {
+                const sigBase64 = fs.readFileSync(sigFile.path).toString('base64');
+                omData.technicianSignature = `data:${sigFile.mimetype};base64,${sigBase64}`;
+            }
+            await this.reportService.generateFullReport(omData, categorizedData, reportPath, reportTitle);
+        } else {
+            await this.reportService.generate(categorizedData, reportPath, reportTitle);
+        }
 
         return {
             reportPath,
             reportName,
             cleanup: () => {
                 if (fs.existsSync(reportPath)) fs.unlinkSync(reportPath);
+                if (sigFile && fs.existsSync(sigFile.path)) fs.unlinkSync(sigFile.path);
                 thermalImages.forEach(img => {
                     if (fs.existsSync(img.thermalImagePath)) fs.unlinkSync(img.thermalImagePath);
                     if (img.realImagePath && fs.existsSync(img.realImagePath)) fs.unlinkSync(img.realImagePath);

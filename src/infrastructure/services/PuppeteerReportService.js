@@ -3,356 +3,841 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 const IReportService = require('../../domain/repositories/IReportService');
 const DeviceClassifier = require('../../domain/services/DeviceClassifier');
+const { OM_REPORT_DEFAULT_DATA } = require('../../domain/constants/omReportTemplateData');
 
 class PuppeteerReportService extends IReportService {
     async generate(dataList, outputPath, reportTitle = "BÁO CÁO KẾT QUẢ KIỂM TRA NHIỆT") {
+        return this.generateFullReport(OM_REPORT_DEFAULT_DATA, dataList, outputPath, reportTitle);
+    }
+
+    async generateFullReport(omData, thermalDataList, outputPath, reportTitle = "BIÊN BẢN KIỂM TRA – BẢO TRÌ – BẢO DƯỠNG") {
+        let thermalPagesCount = 0;
+        if (thermalDataList && thermalDataList.length > 0) {
+            if (thermalDataList[0].items) {
+                // Categorized format: each category takes Math.max(1, ceil(items/2)) pages
+                thermalPagesCount = thermalDataList.reduce((acc, cat) => {
+                    const count = cat.items ? cat.items.length : 0;
+                    return acc + Math.max(1, Math.ceil(count / 2));
+                }, 0);
+            } else {
+                thermalPagesCount = thermalDataList.length;
+            }
+        } else {
+            // Section 10 always takes at least 1 page (placeholder if empty)
+            thermalPagesCount = 1;
+        }
+        const totalPages = 7 + thermalPagesCount;
         let browser;
         try {
             const launchOptions = {
                 headless: "new",
                 timeout: 60000,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-first-run'
-                ]
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
             };
-
-            // Electron Packaging Support
             if (process.versions.electron) {
-                console.log("Detected Electron Environment. Configuring custom executable path...");
                 const exePath = path.join(process.resourcesPath, 'chromium', 'chrome.exe');
-
-                // Recursively search for chrome.exe if the precise path varies (Puppeteer structure adds hash folders)
-                // However, for simplicity, we will assume we flatten it or copy specific folder.
-                // Better strategy: Let's assume we copy the 'chrome-win' contents directly to 'resources/chromium'
-                // OR we point to the folder. 
-                // Let's rely on checking if the path exists.
-
-                // Fallback attempt to find it if we copy the entire .cache structure
-                // But simplified for now:
-                if (fs.existsSync(exePath)) {
-                    launchOptions.executablePath = exePath;
-                    console.log("Using packaged Chromium at:", exePath);
-                } else {
-                    // Try common puppeteer cache structure inside resources if copied raw
-                    // This part is tricky without knowing exact hash. 
-                    // We will trust the build config to verify.
-                    console.log("Packaged Chromium not found at expected path:", exePath);
-                    // We might fall back to default or throw, but let's try default if not found
-                }
+                if (fs.existsSync(exePath)) launchOptions.executablePath = exePath;
             }
-
             browser = await puppeteer.launch(launchOptions);
         } catch (err) {
-            console.error("PUPPETEER LAUNCH ERROR:", err);
-            throw new Error("Không thể chạy trình duyệt in PDF trên Server. Lỗi: " + err.message);
+            throw new Error("Không thể chạy trình duyệt in PDF: " + err.message);
         }
+        
         const page = await browser.newPage();
-
         let logoBase64 = null;
         try {
             const logoPath = path.join(__dirname, '../../../public/assets/cas_full_logo.png');
-            if (fs.existsSync(logoPath)) {
-                logoBase64 = fs.readFileSync(logoPath).toString('base64');
+            if (fs.existsSync(logoPath)) logoBase64 = fs.readFileSync(logoPath).toString('base64');
+        } catch (e) {}
+
+        const styles = `
+            @page { size: A4; margin: 0; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Times New Roman', Times, serif; padding: 0; margin: 0; color: #000; font-size: 10pt; line-height: 1.3; }
+            
+            .report-page { 
+                position: relative; 
+                width: 210mm; 
+                height: 297mm; 
+                page-break-after: always; 
+                padding: 15mm 20mm 20mm 20mm; 
+                overflow: hidden;
             }
-        } catch (e) {
-            console.error("Logo load error", e);
-        }
+            
+            .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 150pt; color: rgba(0, 86, 179, 0.1); z-index: -1; pointer-events: none; font-weight: bold; }
+            .watermark-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; z-index: -1; width: 500px; }
 
-        let htmlContent = `
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                @page { size: A4; margin: 20px; }
-                body { font-family: sans-serif; padding: 0 20px; color: #000; font-size: 11px; }
-                .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; border-bottom: 2px solid #000; padding-bottom: 8px; opacity: 0.8; }
-                .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.15; z-index: -1; pointer-events: none; }
-                .watermark img { width: 500px; height: auto; }
-                .logo-section { width: 40%; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; }
-                .logo-img { max-width: 180px; height: auto; max-height: 55px; margin-bottom: 3px; display: block; margin-top: 2px; }
-                .logo-sub { font-size: 7px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; margin-top: 0; font-weight: bold; font-style: italic; }
-                .company-info { width: 58%; text-align: right; font-size: 8.5px; line-height: 1.4; color: #333; }
-                .company-name { font-weight: bold; font-size: 10px; color: #000; margin-bottom: 2px; text-transform: uppercase; }
-                .title { text-align: center; font-weight: bold; font-size: 18px; margin: 10px 0; text-decoration: none; color: #000; text-transform: uppercase; }
-                .device-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; color: #fff; margin-left: 8px; vertical-align: middle; }
-                .badge-pv { background: #16a34a; }
-                .badge-cable { background: #2563eb; }
-                .badge-cabinet { background: #d97706; }
-                
-                .meta-table { width: 100%; border-top: 2px solid #000; border-bottom: 2px solid #000; margin-bottom: 10px; font-size: 11px; }
-                .meta-table td { padding: 4px 0; vertical-align: top; }
-                .meta-label { font-weight: bold; width: 100px; }
-                .meta-val { width: 200px; }
-                
-                .images-row { display: flex; gap: 10px; margin-bottom: 5px; height: 260px; }
-                .image-box { flex: 1; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; }
-                .image-box > img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
-                .thermal-container { position: relative; display: inline-block; height: 100%; }
-                .image-wrapper { position: relative; display: block; line-height: 0; height: 100%; }
-                .image-wrapper img { display: block; height: 100%; width: auto; object-fit: contain; }
-                .image-label { position: absolute; top: 5px; left: 5px; background: rgba(255,255,255,0.7); padding: 2px 5px; font-size: 10px; font-weight: bold; border: 1px solid #999; z-index: 20; color: #000; }
-                
-                .scale-container { position: absolute; right: 0; top: 0; bottom: 0; width: 55px; display: flex; flex-direction: row; align-items: stretch; background: rgba(255,255,255,0.8); padding: 5px; box-sizing: border-box; }
-                .scale-bar { width: 12px; height: 100%; background: linear-gradient(to top, blue, cyan, green, yellow, orange, red); border: 1px solid #333; }
-                .scale-values { display: flex; flex-direction: column; justify-content: space-between; margin-left: 3px; font-size: 8px; font-weight: bold; color: #000; }
-                
-                .marker { position: absolute; width: 12px; height: 12px; transform: translate(-50%, -50%); pointer-events: none; z-index: 30; display: flex; align-items: center; justify-content: center; }
-                .marker-hot { border: 2px solid red; border-radius: 50%; }
-                .marker-cold { border: 2px solid blue; border-radius: 50%; }
-                .marker-center { }
-                .marker-center::before, .marker-center::after { content: ''; position: absolute; background: #000; }
-                .marker-center::before { top: 5px; left: 0; width: 12px; height: 2px; }
-                .marker-center::after { top: 0; left: 5px; width: 2px; height: 12px; }
-                .marker-label { position: absolute; top: -15px; left: 10px; background: rgba(255,255,255,0.7); padding: 0 2px; font-size: 9px; font-weight: bold; white-space: nowrap; color: red; text-shadow: 1px 1px 0 #fff; }
-                .marker-cold .marker-label { color: blue; }
-                .marker-center .marker-label { color: #000; }
+            .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #0056b3; padding-bottom: 5px; margin-bottom: 10px; width: 100%; }
+            .logo-section img { max-height: 45px; }
+            .company-info { text-align: right; font-size: 7.2pt; color: #444; line-height: 1.2; opacity: 0.5; }
+            
+            .title-main { text-align: center; font-weight: bold; font-size: 15pt; color: #000; margin: 5px 0 2px 0; text-transform: uppercase; }
+            .title-sub { text-align: center; font-style: italic; font-size: 9pt; margin-bottom: 15px; color: #333; }
+            
+            .section-header { color: #cc0000; font-weight: bold; margin-top: 12px; margin-bottom: 5px; font-size: 11pt; border-bottom: 1.5px solid #cc0000; padding-bottom: 2px; }
+            .section-title { font-weight: bold; color: #002d5a; margin-top: 8px; margin-bottom: 5px; font-size: 10pt; }
+            
+            .info-table { width: 100%; border: none; margin-bottom: 8px; }
+            .info-table td { border: none; padding: 2px 0; vertical-align: top; }
+            .info-label { font-weight: bold; width: 180px; }
+            .info-sublabel { font-size: 8pt; font-style: italic; color: #555; display: block; margin-top: -2px; font-weight: normal; }
+            .info-value { font-weight: normal; border-bottom: 1px dotted #ccc; flex-grow: 1; }
 
-                .section-title { font-weight: bold; font-size: 12px; margin-bottom: 5px; margin-top: 15px; }
-                .params-grid { display: grid; grid-template-columns: auto auto auto; gap: 5px 20px; font-size: 11px; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 10px; }
-                .param-row { display: contents; }
-                .param-label { font-weight: bold; }
-                
-                table.data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
-                table.data-table th { border: 1px solid #000; background-color: #f0f0f0; padding: 4px; font-weight: bold; text-align: center; }
-                table.data-table td { border: 1px solid #000; padding: 4px; text-align: center; }
-                table.data-table td.left { text-align: left; }
-                
-                .status-badge { padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; color: #fff; }
-                .status-normal { background-color: #28a745; }
-                .status-warning { background-color: #ffc107; color: #333; }
-                .status-critical { background-color: #dc3545; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 8.5pt; }
+            table, th, td { border: 1px solid #333; }
+            th { background: #f2f2f2; padding: 4px; text-align: center; font-weight: bold; }
+            td { padding: 4px; vertical-align: middle; }
+            .bg-gray { background: #f9f9f9; font-weight: bold; }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+            .italic { font-style: italic; font-weight: normal; }
 
-                /* Result Box Styling */
-                .result-box { padding: 8px; border-radius: 5px; margin-bottom: 10px; border: 1px solid transparent; }
-                .result-normal { background-color: #d1fae5; color: #065f46; border-color: #34d399; }
-                .result-warning { background-color: #ffedd5; color: #9a3412; border-color: #fdba74; }
-                .result-critical { background-color: #fee2e2; color: #991b1b; border-color: #f87171; }
-                .result-title { font-weight: bold; margin-bottom: 4px; text-decoration: underline; }
-                
-                .chart-container { width: 100%; height: 120px; border: 1px solid #eee; position: relative; margin-top: 5px; padding-top: 5px; }
-                .chart-stats { text-align: right; font-size: 10px; margin-bottom: 10px; color: #333; font-weight: bold; }
-                .report-page { position: relative; overflow: visible; z-index: 0; }
-                .page-break { page-break-after: always; }
-            </style>
-        </head>
-        <body>
+            .checkbox-container { display: flex; justify-content: center; align-items: center; }
+            .checkbox { width: 14px; height: 14px; border: 1px solid #000; position: relative; display: inline-block; }
+            .checkbox.checked::after { content: '✓'; position: absolute; top: -4px; left: 1px; font-weight: bold; font-size: 12pt; color: #000; }
+
+            .sig-table { width: 100%; border: 1.5px solid #333; margin-top: 10px; table-layout: fixed; }
+            .sig-table th { background: #f2f2f2; border-bottom: 1.5px solid #333; padding: 6px; font-size: 9pt; height: 40px; }
+            .sig-table td { padding: 8px; vertical-align: top; height: 220px; border-right: 1.5px solid #333; }
+            .sig-table td:last-child { border-right: none; }
+            .sig-field { margin-top: 10px; font-size: 8.5pt; border-bottom: 1px solid #333; padding-bottom: 2px; }
+            .sig-stamp { margin-top: 20px; text-align: center; font-style: italic; color: #666; font-size: 8pt; }
+
+            .footer { 
+                position: absolute; 
+                bottom: 7mm; 
+                left: 20mm;
+                right: 20mm;
+                text-align: center; 
+                font-size: 8pt; 
+                color: #666; 
+                border-top: 0.5px solid #ccc; 
+                padding-top: 3px; 
+            }
+            
+            .tool-img { max-height: 85px; max-width: 140px; display: block; margin: 0 auto; }
+            
+            .thermal-container { display: flex; gap: 10px; margin: 10px 0; height: 250px; }
+            .img-box { flex: 1; border: 1px solid #ccc; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #eee; }
+            .img-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+            
+            .marker-text { position: absolute; transform: translate(-50%, -50%); padding: 1px 3px; border-radius: 2px; font-size: 6.5pt; font-weight: bold; color: white; border: 1px solid white; box-shadow: 0px 0px 2px rgba(0,0,0,0.8); z-index: 10; font-family: 'Segoe UI', Arial, sans-serif; pointer-events: none;}
+            .marker-hot { background-color: #ef4444; }
+            .marker-cold { background-color: #3b82f6; }
+            .marker-center { background-color: #22c55e; }
         `;
 
-        for (let index = 0; index < dataList.length; index++) {
-            const item = dataList[index];
+        let html = `<html><head><meta charset="UTF-8"><style>${styles}</style></head><body>`;
 
-            let thermalImgBase64 = null;
-            let realImgBase64 = null;
+        // PAGE 1: Intro & Equipment
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="title-main">${reportTitle}</div>
+            <div class="title-sub">Solar Rooftop System – Inspection, Maintenance & Overhaul Report</div>
+            
+            <div class="section-header">1. Thông tin / Information</div>
+            <table class="info-table">
+                <tr><td class="info-label">Khách hàng<br/><span class="info-sublabel">Customers:</span></td><td class="info-value">${omData.projectInfo.customer}</td></tr>
+                <tr><td class="info-label">Dự án<br/><span class="info-sublabel">Project:</span></td><td class="info-value">${omData.projectInfo.projectName}</td></tr>
+                <tr><td class="info-label">Địa chỉ dự án<br/><span class="info-sublabel">Inspection location:</span></td><td class="info-value">${omData.projectInfo.location}</td></tr>
+                <tr><td class="info-label">Đơn vị thực hiện<br/><span class="info-sublabel">Inspection company:</span></td><td class="info-value">${omData.projectInfo.inspectionCompany}</td></tr>
+                <tr><td class="info-label">Ngày thực hiện<br/><span class="info-sublabel">Date of inspection:</span></td><td class="info-value">${omData.projectInfo.inspectionDate}</td></tr>
+                <tr><td class="info-label">Công suất lắp đặt<br/><span class="info-sublabel">Installed capacity:</span></td><td class="info-value">${omData.projectInfo.capacity}</td></tr>
+                <tr><td class="info-label">Ngày vận hành thương mại<br/><span class="info-sublabel">Cod:</span></td><td class="info-value">${omData.projectInfo.codDate || ''}</td></tr>
+                <tr><td class="info-label">Lần kiểm tra<br/><span class="info-sublabel">Inspection no.:</span></td><td class="info-value">${omData.projectInfo.inspectionNo}</td></tr>
+                <tr><td class="info-label">Kỹ thuật viên<br/><span class="info-sublabel">Technician:</span></td><td class="info-value">${omData.projectInfo.technicians}</td></tr>
+            </table>
 
-            if (item.thermalImagePath && fs.existsSync(item.thermalImagePath)) {
-                thermalImgBase64 = fs.readFileSync(item.thermalImagePath).toString('base64');
-            }
-            if (item.realImagePath && fs.existsSync(item.realImagePath)) {
-                realImgBase64 = fs.readFileSync(item.realImagePath).toString('base64');
-            }
-
-            const severity = item.severity || 'Normal';
-            const severityClass = severity.toLowerCase(); // 'normal', 'warning', 'critical'
-
-            // Generate synthetic histogram SVG
-            const min = parseFloat(item.minTemp) || 20;
-            const max = parseFloat(item.maxTemp) || 40;
-            const avg = parseFloat(item.centerTemp) || (min + max) / 2; // Fixed: item.avgTemp -> item.centerTemp
-            const range = max - min;
-
-            // Create bars for histogram
-            let barsHtml = '';
-
-            if (item.histogram && item.histogram.length > 0) {
-                // Use REAL histogram data
-                const maxBinVal = Math.max(...item.histogram);
-                // Scale tallest bar to 95% height for better visibility
-                const scaleFactor = maxBinVal > 0 ? 95 / maxBinVal : 1;
-
-                for (let i = 0; i < item.histogram.length; i++) {
-                    const barX = (i / item.histogram.length) * 100;
-                    const barW = 100 / (item.histogram.length + 2);
-                    const hPct = item.histogram[i] * scaleFactor;
-                    const barY = 100 - hPct;
-
-                    // Color gradient based on position (Cold to Hot)
-                    const pos = i / item.histogram.length;
-                    const color = `hsl(${240 - (pos * 240)}, 100%, 50%)`;
-
-                    if (hPct > 0) {
-                        barsHtml += `<rect x="${barX}%" y="${barY}%" width="${barW}%" height="${hPct}%" fill="${color}" />`;
-                    }
-                }
-            } else {
-                // Fallback: Synthetic histogram if no data
-                for (let i = 0; i < 40; i++) {
-                    const barX = (i / 40) * 100;
-                    const barW = 100 / 42;
-                    const pos = i / 40;
-                    const dist = Math.exp(-Math.pow((pos - 0.7) * 3.5, 2));
-                    const hPct = 5 + (dist * 90) + (Math.random() * 5);
-                    const barY = 100 - hPct;
-                    const color = `hsl(${240 - (pos * 240)}, 100%, 50%)`;
-                    barsHtml += `<rect x="${barX}%" y="${barY}%" width="${barW}%" height="${hPct}%" fill="${color}" />`;
-                }
-            }
-
-            htmlContent += `
-            <div class="report-page ${index < dataList.length - 1 ? 'page-break' : ''}">
-                ${logoBase64 ? `<div class="watermark"><img src="data:image/png;base64,${logoBase64}" alt="Watermark"/></div>` : ''}
-                <div class="header-container">
-                    <div class="logo-section">
-                        ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" class="logo-img" alt="CAS Logo"/>` : ''}
-                        <div class="logo-sub">Automate Your Business & Free Your Mind</div>
-                    </div>
-                    <div class="company-info">
-                        <div class="company-name">CONTROL & AUTOMATION SOLUTIONS CO.,LTD.</div>
-                        Factory: Lot C3, Road No.3, Hoa Cam Industrial Zone, Danang, Vietnam<br/>
-                        Office: 8th Floor, PeachTree Building, 388 Dien Bien Phu Street, Danang, Vietnam<br/>
-                        Phone: (+84) 236 3875 666 Fax: (+84) 236 3875 777 Website: www.cas-energy.com
-                    </div>
-                </div>
-
-                <div class="title">${reportTitle}</div>
-
-                <table class="meta-table">
+            <div class="section-header">2. Thiết bị sử dụng / Equipment Used</div>
+            <table>
+                <tr>
+                    <th style="width: 25%;">Tên thiết bị / <span class="italic">Equipment</span></th>
+                    <th style="width: 35%;">Hình ảnh / <span class="italic">Photo</span></th>
+                    <th style="width: 40%;">Chức năng / <span class="italic">Function</span></th>
+                </tr>
+                ${(omData.equipmentUsed || []).map(e => `
                     <tr>
-                        <td class="meta-label">File:</td> <td class="meta-val">${item.filename}.BMT</td>
-                        <td class="meta-label" style="text-align:right">Date:</td> <td class="meta-val" style="text-align:right">${item.createdAt}</td>
+                        <td class="text-center font-bold">${e.name}</td>
+                        <td>${this._renderToolPhoto(e.photo)}</td>
+                        <td class="text-center">${e.function}</td>
                     </tr>
+                `).join('')}
+            </table>
+            ${this._renderFooter(1, totalPages)}
+        </div>`;
+
+        // PAGE 2: PV System specs & checklist
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="section-header">3. Hệ thống tấm pin năng lượng mặt trời / PV Panel System</div>
+            <div class="section-title">Thông số kỹ thuật / <span class="italic">Specifications</span></div>
+            <table>
+                <tr><td class="bg-gray">Hãng sản xuất / <span class="italic">Manufacturer</span></td><td class="text-center">${omData.pvSystem.specs.manufacturer}</td><td class="bg-gray">Số lượng tấm / <span class="italic">Panel qty</span></td><td class="text-center">${omData.pvSystem.specs.panelQty}</td></tr>
+                <tr><td class="bg-gray">Model tấm pin / <span class="italic">Panel model</span></td><td class="text-center font-bold">${omData.pvSystem.specs.panelModel}</td><td class="bg-gray">Công suất / <span class="italic">Capacity (Wp)</span></td><td class="text-center font-bold">${omData.pvSystem.specs.capacity}</td></tr>
+                <tr><td class="bg-gray">Ngày lắp đặt / <span class="italic">Install date</span></td><td class="text-center">${omData.pvSystem.specs.installDate || ''}</td><td class="bg-gray">Bảo hành / <span class="italic">Warranty</span></td><td class="text-center">${omData.pvSystem.specs.warranty || ''}</td></tr>
+            </table>
+            
+            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+            <div class="font-bold" style="margin-bottom: 5px;">Kiểm tra bên ngoài <span class="italic">(External visual inspection)</span></div>
+            <table>
+                <tr>
+                    <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${(omData.pvSystem.checklist || []).map(c => `
                     <tr>
-                        <td class="meta-label">Lens type:</td> <td class="meta-val">35° x 26°</td>
-                        <td class="meta-label" style="text-align:right">Time:</td> <td class="meta-val" style="text-align:right">12:00:00 PM</td>
+                        <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK')}</td>
+                        <td class="text-center">${this._renderCheck(c.status !== 'OK')}</td>
+                        <td>${c.remarks || ''}</td>
                     </tr>
-                </table>
+                `).join('')}
+            </table>
 
-                <div class="images-row">
-                    <div class="image-box">
-                         <div class="thermal-container">
-                            <div class="image-wrapper">
-                                ${thermalImgBase64 ? `<img src="data:image/jpeg;base64,${thermalImgBase64}"/>` : '<span>No Thermal Image</span>'}
-                                
-                                ${item.spots ? `
-                                    <div class="marker marker-hot" style="left: ${item.spots.hot.x}%; top: ${item.spots.hot.y}%;"><span class="marker-label">HS1</span></div>
-                                    <div class="marker marker-cold" style="left: ${item.spots.cold.x}%; top: ${item.spots.cold.y}%;"><span class="marker-label">CS1</span></div>
-                                ` : ''}
-                                <div class="marker marker-center" style="left: 50%; top: 50%;"><span class="marker-label">M1</span></div>
-                            </div>
-                            <div class="scale-container">
-                                <div class="scale-bar"></div>
-                                <div class="scale-values">
-                                    <span>${item.maxTemp}</span>
-                                    <span>${((parseFloat(item.maxTemp) + parseFloat(item.minTemp)) / 2 + (parseFloat(item.maxTemp) - parseFloat(item.minTemp)) / 4).toFixed(1)}</span>
-                                    <span>${((parseFloat(item.maxTemp) + parseFloat(item.minTemp)) / 2).toFixed(1)}</span>
-                                    <span>${((parseFloat(item.maxTemp) + parseFloat(item.minTemp)) / 2 - (parseFloat(item.maxTemp) - parseFloat(item.minTemp)) / 4).toFixed(1)}</span>
-                                    <span>${item.minTemp}</span>
-                                </div>
-                            </div>
-                         </div>
-                    </div>
-                    <div class="image-box">
-                         ${realImgBase64 ? `<img src="data:image/jpeg;base64,${realImgBase64}"/>` : '<span>No Real Image</span>'}
-                    </div>
-                </div>
-
-                <div class="section-title">Thông số hình ảnh / Picture parameters:</div>
-                <div class="params-grid">
-                   <div class="param-row"><div class="param-label">Độ phát xạ / Emissivity:</div> <div>${item.emissivity}</div> <div></div></div>
-                   <div class="param-row"><div class="param-label">Nhiệt độ phản chiếu / Refl. temp. [°C]:</div> <div>${item.reflectedTemp}</div> <div></div></div>
-                   <div class="param-row"><div class="param-label">Cường độ ánh sáng / Intensity [W/m2]:</div> <div>500</div> <div></div></div>
-                </div>
-
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Điểm đo / Spots</th>
-                            <th>Nhiệt độ / Temperature [°C]</th>
-                            <th>Độ phát xạ / Emissivity</th>
-                            <th>Nhiệt độ phản chiếu / Refl. temp. [°C]</th>
-                            <th>Trạng thái / Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="left">HS1 - Nhiệt độ cao nhất / Hottest Spot</td>
-                            <td>${item.maxTemp}</td>
-                            <td>${item.emissivity}</td>
-                            <td>${item.reflectedTemp}</td>
-                            <td><span class="status-badge status-${severityClass}">${severity.toUpperCase()}</span></td>
-                        </tr>
-                        <tr>
-                            <td class="left">CS1 - Nhiệt độ thấp nhất / Coldest Spot</td>
-                            <td>${item.minTemp}</td>
-                            <td>${item.emissivity}</td>
-                            <td>${item.reflectedTemp}</td>
-                            <td><span class="status-badge status-${parseFloat(item.minTemp) >= 65 ? 'critical' : parseFloat(item.minTemp) >= 45 ? 'warning' : 'normal'}">${parseFloat(item.minTemp) >= 65 ? 'CRITICAL' : parseFloat(item.minTemp) >= 45 ? 'WARNING' : 'NORMAL'}</span></td>
-                        </tr>
-                        <tr>
-                            <td class="left">M1 - Nhiệt độ trung bình / Center Spot</td>
-                            <td>${item.centerTemp}</td>
-                            <td>${item.emissivity}</td>
-                            <td>${item.reflectedTemp}</td>
-                            <td><span class="status-badge status-${parseFloat(item.centerTemp) >= 65 ? 'critical' : parseFloat(item.centerTemp) >= 45 ? 'warning' : 'normal'}">${parseFloat(item.centerTemp) >= 65 ? 'CRITICAL' : parseFloat(item.centerTemp) >= 45 ? 'WARNING' : 'NORMAL'}</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="section-title">Biểu đồ nhiệt / Histogram:</div>
-                <div class="chart-stats">
-                     Minimum: ${min.toFixed(1)} °C &nbsp; Maximum: ${max.toFixed(1)} °C &nbsp; Average: ${avg.toFixed(1)} °C
-                </div>
-                <div class="chart-container" style="height: 100px; border: 1px solid #ddd; background: #fafafa;">
-                     <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                         <!-- Grid lines -->
-                         <line x1="0" y1="20" x2="100" y2="20" stroke="#ddd" stroke-width="0.5" />
-                         <line x1="0" y1="40" x2="100" y2="40" stroke="#ddd" stroke-width="0.5" />
-                         <line x1="0" y1="60" x2="100" y2="60" stroke="#ddd" stroke-width="0.5" />
-                         <line x1="0" y1="80" x2="100" y2="80" stroke="#ddd" stroke-width="0.5" />
-                         <!-- Bars -->
-                         ${barsHtml}
-                     </svg>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #555; padding: 2px 0;">
-                    <span>${min.toFixed(1)} °C</span>
-                    <!-- Middle value removed -->
-                    <span style="visibility: hidden;">${avg.toFixed(1)} °C</span> 
-                    <span>${max.toFixed(1)} °C</span>
-                </div>
-
-                <div class="result-box result-${severityClass}">
-                    <div class="result-title">Kết luận / Result:</div>
-                    <p style="margin: 0;">${item.conclusion}</p>
-                </div>
-                
-                <div class="section-title">Đề xuất / Recommendation:</div>
-                <p style="margin: 0;">${item.recommendation}</p>
+            <div class="font-bold" style="margin-top: 10px; margin-bottom: 5px;">Kiểm tra nhiệt độ <span class="italic">(Thermal imaging check)</span></div>
+            <table>
+                <tr>
+                    <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${(omData.pvSystem.thermalCheck || []).map(c => `
+                    <tr>
+                        <td>${c.item.replace('\n', '<br/>')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK')}</td>
+                        <td class="text-center">${this._renderCheck(c.status !== 'OK')}</td>
+                        <td>${c.remarks || ''}</td>
+                    </tr>
+                `).join('')}
+            </table>
+            <div class="font-bold" style="margin-top: 15px; margin-bottom: 5px;">Điện trở cách điện chuỗi pin <span class="italic">(String insulation resistance test (MΩ))</span></div>
+            <div style="font-size: 8.5pt; color: #333; margin-bottom: 10px; line-height: 1.5;">
+                <span style="color: #cc0000;">▸</span> Tiêu chuẩn / Standard: IEC 62446 – ≥ 1 MΩ @ 1000 VDC<br/>
+                <span style="color: #cc0000;">▸</span> Off Inverter tại app và off Switch DC trước khi đo.
             </div>
-            `;
+            <table class="text-center">
+                <tr>
+                    <th style="width: 15%;">String</th>
+                    <th style="width: 12%;">Số tấm / <span class="italic">Qty</span></th>
+                    <th style="width: 12%;">Voc (V)</th>
+                    <th style="width: 18%;">(+) - PE (MΩ)</th>
+                    <th style="width: 18%;">(-) - PE (MΩ)</th>
+                    <th style="width: 15%;">Đánh giá <span class="italic">Evaluation</span></th>
+                    <th style="width: 10%;">Ghi chú <span class="italic">Remarks</span></th>
+                </tr>
+                ${(omData.pvSystem.insulationResistance || []).map(t => `
+                <tr>
+                    <td>${t.string || '-'}</td>
+                    <td>${t.panelQty || '-'}</td>
+                    <td>${t.voc || '-'}</td>
+                    <td>${t.irPlus || '-'}</td>
+                    <td>${t.irMinus || '-'}</td>
+                    <td class="font-bold">${t.evaluation || '-'}</td>
+                    <td>${t.remarks || ''}</td>
+                </tr>`).join('')}
+            </table>
+
+            <div style="margin-top: 15px;">
+                <div class="section-header">4. Khung giá đỡ hệ thống pin năng lượng mặt trời / <span class="italic">PV Mounting Structure</span></div>
+                <div class="section-title">Thông số kỹ thuật / <span class="italic">Specifications</span></div>
+                <table>
+                    <tr>
+                        <td class="bg-gray font-bold" style="width: 25%;">Loại kết cấu / <span class="italic">Structure type</span></td>
+                        <td style="width: 25%; font-weight: bold;">${omData.mountingStructure.specs.type}</td>
+                        <td class="bg-gray font-bold" style="width: 25%;">Chất liệu / <span class="italic">Material</span></td>
+                        <td style="width: 25%; font-weight: bold;">${omData.mountingStructure.specs.material}</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-gray font-bold">Năm lắp đặt / <span class="italic">Install year</span></td>
+                        <td>${omData.mountingStructure.specs.installYear}</td>
+                        <td class="bg-gray font-bold">Tình trạng tổng thể / <span class="italic">Overall condition</span></td>
+                        <td style="font-weight: bold;">${omData.mountingStructure.specs.overallCondition}</td>
+                    </tr>
+                </table>
+            </div>
+            ${this._renderFooter(2, totalPages)}
+        </div>`;
+
+        // PAGE 3: PV Mounting Checklist & Solar AC Cabinet
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+            <div class="font-bold" style="margin-bottom: 5px;">Kiểm tra bên ngoài & cơ khí <span class="italic">(Visual & mechanical inspection)</span></div>
+            <table>
+                <tr>
+                    <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${(omData.mountingStructure.checklist || []).map(c => `
+                    <tr>
+                        <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                        <td>${c.remarks || ''}</td>
+                    </tr>
+                `).join('')}
+            </table>
+
+            <div style="margin-top: 15px;">
+                <div class="section-header">5. Tủ điện AC Solar / <span class="italic">Solar AC Cabinet</span></div>
+                <div class="section-title">Thông số / <span class="italic">Specifications</span></div>
+                <table>
+                    <tr>
+                        <td class="bg-gray font-bold" style="width: 25%;">Hãng sản xuất / <span class="italic">Manufacturer</span></td>
+                        <td class="text-center font-bold" style="width: 25%;">${omData.acCabinet.specs.manufacturer}</td>
+                        <td class="bg-gray font-bold" style="width: 25%;">Model</td>
+                        <td class="text-center font-bold" style="width: 25%;">${omData.acCabinet.specs.model}</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-gray font-bold">Số CB / <span class="italic">CB Qty</span></td>
+                        <td class="text-center">${omData.acCabinet.specs.cbQty}</td>
+                        <td class="bg-gray font-bold">Chỉ số IP / <span class="italic">IP Rating</span></td>
+                        <td class="text-center">${omData.acCabinet.specs.ipRating}</td>
+                    </tr>
+                </table>
+                
+                <div class="font-bold" style="margin-top: 10px; margin-bottom: 5px;">Kiểm tra khi có điện <span class="italic">(Energized inspection)</span></div>
+                <table>
+                    <tr>
+                        <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                        <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
+                        <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                        <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
+                    </tr>
+                    ${(omData.acCabinet.energizedCheck || []).map(c => `
+                        <tr>
+                            <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                            <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                            <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                            <td>${c.remarks || ''}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                
+                <div class="font-bold" style="margin-top: 10px; margin-bottom: 5px;">Kiểm tra khi không có điện <span class="italic">(De-energized inspection)</span></div>
+                <table>
+                    <tr>
+                        <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                        <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
+                        <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                        <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
+                    </tr>
+                    ${(omData.acCabinet.deEnergizedCheck || []).map(c => `
+                        <tr>
+                            <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                            <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                            <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                            <td>${c.remarks || ''}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </div>
+            ${this._renderFooter(3, totalPages)}
+        </div>`;
+
+        // PAGE 4: Inverter
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="section-header">6. Biến tần / Inverter</div>
+            <div class="section-title">Thông số kỹ thuật / <span class="italic">Specifications</span></div>
+            <table>
+                <tr>
+                    <td class="bg-gray font-bold" style="width: 25%;">Hãng sản xuất / <span class="italic">Manufacturer</span></td>
+                    <td style="width: 25%; font-weight: bold;">${omData.inverter.specs.manufacturer}</td>
+                    <td class="bg-gray font-bold" style="width: 25%;">Model / Series</td>
+                    <td style="width: 25%; font-weight: bold;">${omData.inverter.specs.model}</td>
+                </tr>
+                <tr>
+                    <td class="bg-gray font-bold">Công suất danh định / <span class="italic">Rated power (kW)</span></td>
+                    <td>${omData.inverter.specs.power}</td>
+                    <td class="bg-gray font-bold">Số lượng / <span class="italic">Quantity</span></td>
+                    <td>${omData.inverter.specs.qty}</td>
+                </tr>
+                <tr>
+                    <td class="bg-gray font-bold">Firmware version</td>
+                    <td>${omData.inverter.specs.firmware || ''}</td>
+                    <td class="bg-gray font-bold">Ngày cài đặt / <span class="italic">Install date</span></td>
+                    <td>${omData.inverter.specs.installDate}</td>
+                </tr>
+            </table>
+            
+            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 55%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                        <th style="width: 15%;">Đạt <br/><span class="italic">(OK)</span></th>
+                        <th style="width: 15%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                        <th style="width: 15%;">Ghi chú / <span class="italic">Remarks</span></th>
+                    </tr>
+                </thead>
+                ${omData.inverter.checklist.map(c => `
+                    <tr>
+                        <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                        <td>${c.remarks || ''}</td>
+                    </tr>
+                `).join('')}
+            </table>
+            ${this._renderFooter(4, totalPages)}
+        </div>`;
+
+        // PAGE 6: Others (Section 7, 8, 9)
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="section-header">7. Khung giá đỡ Tủ AC / Inverter / AC Cabinet & Inverter Mounting Frame</div>
+            <div class="section-title">Thông số kỹ thuật / <span class="italic">Specifications</span></div>
+            <table>
+                <tr>
+                    <td class="font-bold bg-gray" style="width: 30%;">Loại kết cấu / <span class="italic">Structure type</span></td>
+                    <td style="width: 30%;">${omData.others.mountingFrame.specs.type}</td>
+                    <td class="font-bold bg-gray" style="width: 20%;">Chất liệu / <span class="italic">Material</span></td>
+                    <td style="width: 20%;">${omData.others.mountingFrame.specs.material}</td>
+                </tr>
+            </table>
+
+            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+            <table>
+                <tr>
+                    <th style="width: 55%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 15%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 15%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 15%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${omData.others.mountingFrame.checklist.map(c => `
+                <tr>
+                    <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                    <td class="text-center">${this._renderCheck(c.status === 'Đạt' || c.status === 'OK')}</td>
+                    <td class="text-center">${this._renderCheck(c.status === 'Không Đạt' || c.status === 'Not OK')}</td>
+                    <td>${c.remarks || ''}</td>
+                </tr>
+                `).join('')}
+            </table>
+
+            <div class="section-header">8. Máng cáp & Ống ruột gà (AC / DC) / Cable Tray & Conduit (AC / DC)</div>
+            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+            <table>
+                <tr>
+                    <th style="width: 55%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 15%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 15%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 15%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${omData.others.cableTray.map(c => `
+                <tr>
+                    <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                    <td class="text-center">${this._renderCheck(c.status === 'Đạt' || c.status === 'OK')}</td>
+                    <td class="text-center">${this._renderCheck(c.status === 'Không Đạt' || c.status === 'Not OK')}</td>
+                    <td>${c.remarks || ''}</td>
+                </tr>
+                `).join('')}
+            </table>
+
+
+            <div class="section-header">9. Kết cấu mái nhà / Roof Structure</div>
+            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+            <table>
+                <tr>
+                    <th style="width: 55%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 15%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 15%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 15%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${omData.others.roofStructure.map(c => `
+                <tr>
+                    <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                    <td class="text-center">${this._renderCheck(c.status === 'Đạt' || c.status === 'OK' || c.status === 'Không Có')}</td>
+                    <td class="text-center">${this._renderCheck(c.status === 'Không Đạt' || c.status === 'Not OK')}</td>
+                    <td>${c.remarks || ''}</td>
+                </tr>
+                `).join('')}
+            </table>
+
+            <div class="section-header" style="margin-top: 20px;">10. Kết quả kiểm tra nhiệt ảnh / <span class="italic">Thermal Imaging Results</span></div>
+            <div style="font-size: 9pt; color: #333; margin-bottom: 5px; line-height: 1.6;">
+                <span style="color: #cc0000;">▸</span> <strong>Thiết bị:</strong> Testo 871  |  <strong>Emissivity:</strong> 0.95  |  <strong>Nhiệt độ phản chiếu:</strong> 20°C<br/>
+                <span style="color: #cc0000;">▸</span> <strong>Tiêu chuẩn:</strong> điểm đấu nối ≤ 65°C;  ΔT > 5°C → Warning;  ΔT > 10°C → Critical
+            </div>
+
+            ${this._renderFooter(5, totalPages)}
+        </div>`;
+
+        // PAGE 7+: Thermal Analysis Pages (Section 10)
+        if (thermalDataList && thermalDataList.length > 0) {
+            if (thermalDataList[0].items) {
+                html += this._renderThermalPages(thermalDataList, logoBase64, 6, totalPages);
+            } else {
+                let startPage = 6;
+                thermalDataList.forEach((item, idx) => {
+                    html += this._renderThermalPage(item, logoBase64, startPage + idx, totalPages);
+                });
+            }
+        } else {
+            // Render Placeholder for Section 10
+            html += `<div class="report-page">
+                ${this._renderHeader(logoBase64)}
+                ${this._renderWatermark(logoBase64)}
+                <div style="margin-top: 100px; text-align: center; color: #666; font-style: italic; font-size: 11pt;">
+                    Không có dữ liệu ảnh nhiệt / No thermal imaging data
+                </div>
+                ${this._renderFooter(6, totalPages)}
+            </div>`;
         }
 
-        htmlContent += `
-        </body>
-        </html>
-        `;
+        // PAGE: Earth Resistance & Summary (Section 11 & 12)
+        const earthResPage = 6 + thermalPagesCount;
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="section-header">11. Kết quả đo điện trở nối đất / Earth Resistance Test Results</div>
+            <div style="font-size: 8.5pt; color: #333; margin-bottom: 10px; line-height: 1.5;">
+                <span style="color: #cc0000;">▸</span> Tiêu chuẩn / Standard: IEC 60364 – ≤ 4 Ω<br/>
+                <span style="color: #cc0000;">▸</span> Thiết bị đo / Equipment: Kyoritsu 4105A – Earth tester
+            </div>
+            <table>
+                <tr>
+                    <th style="width: 40%;">Điểm đo / <span class="italic">Measurement Point</span></th>
+                    <th style="width: 15%;">Tiêu chuẩn / <span class="italic">Standard</span></th>
+                    <th style="width: 15%;">Giá trị đo / <span class="italic">Value (Ω)</span></th>
+                    <th style="width: 15%;">Đánh giá / <span class="italic">Evaluation</span></th>
+                </tr>
+                ${omData.earthResistance.map(r => `
+                    <tr>
+                        <td>${r.point.replace(/\n/g, '<br/>')}</td>
+                        <td class="text-center">${r.standard}</td>
+                        <td class="text-center font-bold">${r.value}</td>
+                        <td class="text-center font-bold" style="color: ${r.evaluation === 'OK' ? '#15803d' : '#ef4444'};">${r.evaluation}</td>
+                    </tr>
+                `).join('')}
+            </table>
 
-        await page.setContent(htmlContent, {
-            waitUntil: 'load',
-            timeout: 120000
-        });
-        await page.pdf({
-            path: outputPath,
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
-            timeout: 120000
-        });
+            <div class="section-header" style="margin-top: 20px;">12. Tổng hợp kết quả kiểm tra / Inspection Summary</div>
+            <table>
+                <tr>
+                    <th style="width: 30%;">Hạng mục / <span class="italic">Module</span></th>
+                    <th style="width: 15%;">Mức độ / <span class="italic">Severity</span></th>
+                    <th style="width: 25%;">Mô tả sự cố / <span class="italic">Description</span></th>
+                    <th style="width: 30%;">Hành động / <span class="italic">Action Required</span></th>
+                </tr>
+                ${omData.summary.map(s => `
+                    <tr>
+                        <td>${s.module.replace(/\n/g, '<br/>')}</td>
+                        <td class="text-center" style="color: ${s.severity === 'Cao' ? '#ef4444' : s.severity === 'Trung bình' ? '#f59e0b' : '#15803d'}; font-weight: bold;">${s.severity}</td>
+                        <td class="text-center">${s.description}</td>
+                        <td>${s.action || '-'}</td>
+                    </tr>
+                `).join('')}
+            </table>
 
+            <div style="margin-top: 20px; padding: 10px; border: 1.5px solid #0056b3; background: #f4f9ff; border-radius: 6px;">
+                <div style="font-weight: bold; font-size: 10pt; color: #0056b3; margin-bottom: 5px;">Nhận xét tổng quan / <span class="italic">Overall Comments:</span></div>
+                <div style="font-size: 9.5pt; color: #333; line-height: 1.5; min-height: 35px;">${omData.overallComments || 'Hệ thống hoạt động bình thường – Tiếp tục vận hành.'}</div>
+            </div>
+
+            ${this._renderFooter(earthResPage, totalPages)}
+        </div>`;
+
+        // PAGE: Sign-off & Confirmation (Section 13)
+        const sigPage = earthResPage + 1;
+        html += `<div class="report-page">
+            ${this._renderHeader(logoBase64)}
+            ${this._renderWatermark(logoBase64)}
+            <div class="section-header">13. Xác nhận & Chữ ký / <span class="italic">Sign-off & Confirmation</span></div>
+            
+            <table class="sig-table">
+                <tr>
+                    <th style="width: 50%;">KỸ THUẬT VIÊN THỰC HIỆN /<br/><span class="italic">INSPECTION TECHNICIAN</span></th>
+                    <th style="width: 50%;">KHÁCH HÀNG / ĐẠI DIỆN CLIENT /<br/><span class="italic">REPRESENTATIVE</span></th>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="sig-field">Họ tên / <span class="italic">Full Name</span>:</div>
+                        <div class="sig-field">Chức vụ / <span class="italic">Position</span>:</div>
+                        <div class="sig-field">Ngày / <span class="italic">Date</span>:</div>
+                        <div class="sig-stamp">
+                            ${omData.technicianSignature ? `<img src="${omData.technicianSignature}" style="max-height: 80px; max-width: 200px; display: block; margin: 0 auto 5px auto;">` : ''}
+                            [Chữ ký & Đóng dấu / <span class="italic">Signature & Stamp</span>]
+                        </div>
+                    </td>
+                    <td>
+                        <div class="sig-field">Họ tên / <span class="italic">Full Name</span>:</div>
+                        <div class="sig-field">Chức vụ / <span class="italic">Position</span>:</div>
+                        <div class="sig-field">Điện thoại / <span class="italic">Phone</span>:</div>
+                        <div class="sig-stamp">[Chữ ký / <span class="italic">Signature</span>]</div>
+                    </td>
+                </tr>
+            </table>
+
+            <div style="text-align: center; margin-top: 40px; font-weight: bold; color: #444; font-size: 10pt;">
+                — HẾT BIÊN BẢN / <span class="italic">END OF REPORT</span> —
+            </div>
+
+            ${this._renderFooter(sigPage, totalPages)}
+        </div>`;
+
+        html += `</body></html>`;
+
+        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60000 });
+        await page.pdf({ path: outputPath, format: 'A4', printBackground: true });
         await browser.close();
         return outputPath;
+    }
+
+    _renderThermalPages(thermalCats, logo, startPage, totalPages) {
+        let html = '';
+        let pageOffset = 0;
+
+        thermalCats.forEach(cat => {
+            let catItems = cat.items || [];
+            let catRemarks = cat.remarks || 'Hệ thống hoạt động bình thường, tổn hao nhiệt tương đối thấp, không phát hiện rủi ro cháy nổ.';
+            
+            let chunks = [];
+            for (let i = 0; i < catItems.length; i += 2) {
+                chunks.push(catItems.slice(i, i + 2));
+            }
+            if (chunks.length === 0) {
+                chunks.push([]); 
+            }
+
+            chunks.forEach((chunk, chunkIdx) => {
+                let isLastChunkOfCat = (chunkIdx === chunks.length - 1);
+                let pageNum = startPage + pageOffset;
+                let titleSuffix = '';
+
+                html += `<div class="report-page">
+                    ${this._renderHeader(logo)}
+                    ${this._renderWatermark(logo)}
+                    
+                    <div style="font-weight: bold; font-size: 13pt; color: #0056b3; border-bottom: 1.5px solid #0056b3; padding-bottom: 5px; margin-bottom: 15px; margin-top: 10px;">
+                        ${cat.categoryTitle}${titleSuffix}
+                    </div>
+                `;
+
+                chunk.forEach(item => {
+                    let thermalImg = item.irBase64 || (item.thermalImagePath && fs.existsSync(item.thermalImagePath) ? fs.readFileSync(item.thermalImagePath).toString('base64') : null);
+                    let realImg = item.realBase64 || (item.realImagePath && fs.existsSync(item.realImagePath) ? fs.readFileSync(item.realImagePath).toString('base64') : null);
+                    
+                    let renderBadge = (status) => {
+                        let s = (status || 'NORMAL').toUpperCase();
+                        let color = '#22c55e';
+                        if (s === 'WARNING') color = '#f59e0b';
+                        if (s === 'CRITICAL' || s === 'KHẨN') color = '#ef4444';
+                        return `<span style="background: ${color}; color: white; padding: 1.5px 5px; border-radius: 3px; font-weight: bold; font-size: 6.5pt; display: inline-block;">${s}</span>`;
+                    };
+
+                    html += `
+                    <div class="thermal-block" style="margin-bottom: 20px; page-break-inside: avoid;">
+                        <table style="width: 100%; font-size: 8pt; font-weight: bold; margin-bottom: 6px; border: none;">
+                            <tr>
+                                <td style="width: 15%; border: none; padding: 2px;">File:</td><td style="width: 35%; border: none; padding: 2px;">${item.filename}.BMT</td>
+                                <td style="width: 15%; border: none; padding: 2px;">Date:</td><td style="width: 35%; text-align: right; border: none; padding: 2px;">${item.date || '2026-01-11'}</td>
+                            </tr>
+                            <tr>
+                                <td style="border: none; padding: 2px;">Lens type:</td><td style="border: none; padding: 2px;">${item.lensType || '35° x 26°'}</td>
+                                <td style="border: none; padding: 2px;">Time:</td><td style="text-align: right; border: none; padding: 2px;">${item.time || '12:00:00 PM'}</td>
+                            </tr>
+                        </table>
+
+                        <div style="display: flex; margin-bottom: 8px; justify-content: space-between; align-items: stretch;">
+                            <div style="width: 290px; border: 1px solid #777; aspect-ratio: 4/3; background: #fff; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                ${thermalImg ? `<img src="data:image/jpeg;base64,${thermalImg}" style="width: 100%; height: 100%; object-fit: cover;" />
+                                ${item.spots ? `
+                                    <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; pointer-events: none;">
+                                        <div class="marker-text marker-hot" style="left: ${item.spots.hot.x}%; top: ${item.spots.hot.y}%;">HS1</div>
+                                        <div class="marker-text marker-cold" style="left: ${item.spots.cold.x}%; top: ${item.spots.cold.y}%;">CS1</div>
+                                        <div class="marker-text marker-center" style="left: 50%; top: 50%;">M1</div>
+                                    </div>
+                                ` : ''}` : '<span style="color: #666; font-size: 8pt;">No Image</span>'}
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: center; width: 45px; padding: 2px 0;">
+                                <span style="font-size: 7.5pt; font-weight: bold; font-family: 'Segoe UI', sans-serif;">${item.maxTemp}°C</span>
+                                <div style="flex: 1; width: 14px; background: linear-gradient(to bottom, #fff3b0, #ff9800, #f44336, #9c27b0, #3f51b5, #000000); border: 1px solid #555; margin: 4px 0; border-radius: 2px;"></div>
+                                <span style="font-size: 7.5pt; font-weight: bold; font-family: 'Segoe UI', sans-serif;">${item.minTemp}°C</span>
+                            </div>
+
+                            <div style="width: 290px; border: 1px solid #777; aspect-ratio: 4/3; background: #fff; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                ${realImg ? `<img src="data:image/jpeg;base64,${realImg}" style="width: 100%; height: 100%; object-fit: cover;" />` : '<span style="color: #666; font-size: 8pt;">No Image</span>'}
+                            </div>
+                        </div>
+
+                        <div style="font-weight: bold; font-size: 8.5pt; margin-bottom: 5px;">Thông số hình ảnh / <span style="font-style: italic; font-weight: normal; font-size: 8pt;">Picture parameters:</span></div>
+                        <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <table style="width: 100%; font-size: 7.5pt; font-weight: bold; border: none; margin: 0;">
+                                    <tr><td style="width: 70%; border: none; padding: 1px;">Độ phát xạ / <span style="font-style: italic; font-weight: normal;">Emissivity:</span></td><td style="text-align: right; border: none; padding: 1px;">${item.emissivity || '0.95'}</td></tr>
+                                    <tr><td style="border: none; padding: 1px;">Nhiệt độ phản chiếu / <span style="font-style: italic; font-weight: normal;">Refl. temp [°C]:</span></td><td style="text-align: right; border: none; padding: 1px;">${item.reflTemp || '20.0'}</td></tr>
+                                    <tr><td style="border: none; padding: 1px;">Cường độ ánh sáng / <span style="font-style: italic; font-weight: normal;">Intensity [W/m2]:</span></td><td style="text-align: right; border: none; padding: 1px;">${item.intensity || '500'}</td></tr>
+                                </table>
+                            </div>
+                            <div style="flex: 1;"></div>
+                        </div>
+                        
+                        <table style="width: 100%; font-size: 7.5pt; border-collapse: collapse; text-align: center; border: 1.5px solid #000; font-family: 'Segoe UI', Arial, sans-serif;">
+                            <tr style="background: #f0f0f0; font-weight: bold;">
+                                <td style="padding: 4px; border: 1px solid #000; width: 35%;">Điểm đo / Spots</td>
+                                <td style="border: 1px solid #000; width: 20%;">Nhiệt độ / Temperature<br/>[°C]</td>
+                                <td style="border: 1px solid #000; width: 15%;">Độ phát xạ /<br/>Emissivity</td>
+                                <td style="border: 1px solid #000; width: 20%;">Nhiệt độ phản chiếu /<br/>Refl. temp. [°C]</td>
+                                <td style="border: 1px solid #000; width: 10%;">Trạng thái /<br/>Status</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left; padding: 4px; border: 1px solid #000; font-size: 7pt;">HS1 - Nhiệt độ cao nhất / <span style="font-style: italic;">Hottest Spot</span></td>
+                                <td style="font-weight: bold; border: 1px solid #000;">${item.maxTemp || '-'}</td>
+                                <td style="border: 1px solid #000;">${item.emissivity || '0.95'}</td>
+                                <td style="border: 1px solid #000;">${item.reflTemp || '20.0'}</td>
+                                <td style="border: 1px solid #000; padding: 4px;">${renderBadge(item.hs1Status)}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left; padding: 4px; border: 1px solid #000; font-size: 7pt;">CS1 - Nhiệt độ thấp nhất / <span style="font-style: italic;">Coldest Spot</span></td>
+                                <td style="font-weight: bold; border: 1px solid #000;">${item.minTemp || '-'}</td>
+                                <td style="border: 1px solid #000;">${item.emissivity || '0.95'}</td>
+                                <td style="border: 1px solid #000;">${item.reflTemp || '20.0'}</td>
+                                <td style="border: 1px solid #000; padding: 4px;">${renderBadge(item.cs1Status)}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left; padding: 4px; border: 1px solid #000; font-size: 7pt;">M1 - Nhiệt độ trung bình / <span style="font-style: italic;">Center Spot</span></td>
+                                <td style="font-weight: bold; border: 1px solid #000;">${item.centerTemp || '-'}</td>
+                                <td style="border: 1px solid #000;">${item.emissivity || '0.95'}</td>
+                                <td style="border: 1px solid #000;">${item.reflTemp || '20.0'}</td>
+                                <td style="border: 1px solid #000; padding: 4px;">${renderBadge(item.m1Status)}</td>
+                            </tr>
+                        </table>
+                    </div>`;
+                });
+
+                if (isLastChunkOfCat) {
+                    html += `
+                    <div style="margin-top: 10px; padding: 12px; border: 1px solid #0056b3; background: #f4f9ff; border-radius: 6px; page-break-inside: avoid;">
+                        <div style="font-weight: bold; font-size: 9pt; color: #0056b3; margin-bottom: 5px;">Nhận xét / Remarks:</div>
+                        <div style="font-size: 8.5pt; color: #333; line-height: 1.5; font-style: italic;">"${catRemarks}"</div>
+                    </div>
+                    `;
+                }
+
+                html += `
+                    ${this._renderFooter(pageNum, totalPages)}
+                </div>`;
+                
+                pageOffset++;
+            });
+        });
+
+        return html;
+    }
+
+    _renderThermalPage(item, logo, pageNum, total) {
+        let thermalImg = item.irBase64 || (item.thermalImagePath && fs.existsSync(item.thermalImagePath) ? fs.readFileSync(item.thermalImagePath).toString('base64') : null);
+        let realImg = item.realBase64 || (item.realImagePath && fs.existsSync(item.realImagePath) ? fs.readFileSync(item.realImagePath).toString('base64') : null);
+        const severityClass = (item.severity || 'Normal').toLowerCase();
+
+        return `
+        <div class="report-page">
+            ${this._renderHeader(logo)}
+            ${this._renderWatermark(logo)}
+            <div class="section-title" style="margin-top: 10px;">Phân tích nhiệt / <span class="italic">Thermal analysis</span>: ${item.filename || 'Ảnh nhiệt'}</div>
+            <table class="meta-table">
+                <tr>
+                    <td class="bg-gray" style="width: 15%;">File</td>
+                    <td style="width: 35%;">${item.filename}.BMT</td>
+                    <td class="bg-gray" style="width: 20%;">Trạng thái / <span class="italic">Status</span></td>
+                    <td style="width: 30%; color: ${(item.severity || '').toLowerCase() === 'khẩn' ? '#cc0000' : ((item.severity || '').toLowerCase() === 'quan trọng' ? '#f59e0b' : '#22c55e')};" class="font-bold uppercase">${item.severity || 'Normal'}</td>
+                </tr>
+                <tr>
+                    <td class="bg-gray">Ngày / Date</td>
+                    <td colspan="3">${item.createdAt || ''}</td>
+                </tr>
+            </table>
+
+            <div class="thermal-container">
+                <div class="img-box">
+                    ${thermalImg ? `<img src="data:image/jpeg;base64,${thermalImg}"/>` : '<span>No Thermal Image</span>'}
+                    ${item.spots ? `
+                                    <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto; aspect-ratio: 4/3; max-width: 100%; max-height: 100%; pointer-events: none;">
+                                        <div class="marker-text marker-hot" style="left: ${item.spots.hot.x}%; top: ${item.spots.hot.y}%;">HS1</div>
+                                        <div class="marker-text marker-cold" style="left: ${item.spots.cold.x}%; top: ${item.spots.cold.y}%;">CS1</div>
+                                        <div class="marker-text marker-center" style="left: 50%; top: 50%;">M1</div>
+                                    </div>
+                    ` : ''}
+                </div>
+                <!-- Mini Scale -->
+                <div style="width: 30px; background: linear-gradient(to top, blue, cyan, green, yellow, orange, red); border: 1px solid #333;"></div>
+                <div class="img-box">
+                    ${realImg ? `<img src="data:image/jpeg;base64,${realImg}"/>` : '<span>No Real Image</span>'}
+                </div>
+            </div>
+
+            <table>
+                <tr><th>Vị trí / Spot</th><th>Nhiệt độ / Temp (°C)</th><th>Đánh giá / Evaluation</th></tr>
+                <tr><td>Hot Spot (HS1)</td><td class="text-center font-bold">${item.maxTemp}</td><td class="text-center italic">${item.severity || 'Normal'}</td></tr>
+                <tr><td>Trung tâm (M1)</td><td class="text-center font-bold">${item.centerTemp}</td><td class="text-center">Normal</td></tr>
+            </table>
+
+            <div style="margin-top: 10px; padding: 10px; border: 1px solid #cc0000; border-radius: 4px;">
+                <div class="font-bold">Kết luận & Đề xuất / Result & Recommendation:</div>
+                <div style="margin-top: 5px;">${item.conclusion || 'Hệ thống hoạt động bình thường.'}</div>
+                <div style="margin-top: 3px; font-style: italic;">${item.recommendation || '-'}</div>
+            </div>
+            ${this._renderFooter(pageNum, total)}
+        </div>`;
+    }
+
+    _renderHeader(logoBase64) {
+        return `
+            <div class="header-container">
+                <div class="logo-section">
+                    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" />` : '<span style="font-weight: bold; font-size: 12pt; color: #0056b3;">CAS</span>'}
+                </div>
+                <div class="company-info">
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">CONTROL & AUTOMATION SOLUTIONS CO., LTD.</span><br/>
+                    Factory: Lot C3, Road No. 2, Hoa Cam Industrial Zone, Danang<br/>
+                    Office: 8th Floor, Petrolimex Building, 122 September 2nd Street, Danang<br/>
+                    Phone: (+84) 236 3675 666 | www.cas-energy.com
+                </div>
+            </div>`;
+    }
+
+    _renderWatermark(logoBase64) {
+        if (logoBase64) {
+            return `<img class="watermark-img" src="data:image/png;base64,${logoBase64}" />`;
+        }
+        return `<div class="watermark">CAS</div>`;
+    }
+
+    _renderCheck(checked) {
+        return `<div class="checkbox-container"><div class="checkbox${checked ? ' checked' : ''}"></div></div>`;
+    }
+
+    _renderFooter(pageNum, totalPages) {
+        return `<div class="footer">CAS Energy Solutions – Báo cáo kiểm tra bảo trì | Trang ${pageNum}/${totalPages}</div>`;
+    }
+
+    _renderToolPhoto(photoPath) {
+        if (!photoPath) return '<span style="color: #999; font-size: 8pt;">No photo</span>';
+        try {
+            if (photoPath.startsWith('data:')) {
+                return `<img class="tool-img" src="${photoPath}" />`;
+            }
+            const fs = require('fs');
+            if (fs.existsSync(photoPath)) {
+                const base64 = fs.readFileSync(photoPath).toString('base64');
+                const ext = photoPath.split('.').pop().toLowerCase();
+                const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+                return `<img class="tool-img" src="data:${mime};base64,${base64}" />`;
+            }
+        } catch (e) {}
+        return '<span style="color: #999; font-size: 8pt;">No photo</span>';
     }
 }
 

@@ -41,9 +41,30 @@ const upload = multer({ dest: uploadDir });
 // dealing with path resolution in both dev and production (asar)
 const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath));
+app.use(express.json()); // For parsing application/json
 
-// Route binding
-app.post('/upload', upload.array('files'), (req, res) => {
+// Add domain data import
+const { OM_REPORT_DEFAULT_DATA } = require('./domain/constants/omReportTemplateData');
+
+// Route bindings
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+    console.log(`Login attempt: email="${email}", password="${password}"`);
+    // Hardcoded simple credentials for internal tool
+    if ((!email || email === 'engineer@cas.vn') && password === 'Cas@12345') {
+        console.log('Login successful');
+        res.json({ success: true, token: 'cas_thermal_token_123' });
+    } else {
+        console.log('Login failed');
+        res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng' });
+    }
+});
+
+app.get('/api/om-template', (req, res) => {
+    res.json(OM_REPORT_DEFAULT_DATA);
+});
+
+app.post('/upload', upload.any(), (req, res) => {
     thermalReportController.handleUpload(req, res);
 });
 
