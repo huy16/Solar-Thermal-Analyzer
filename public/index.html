@@ -961,6 +961,13 @@
                     </div>
                     
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100 mb-3">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">Thông số Tủ điện / <span class="italic font-normal text-slate-500">Cabinet specs</span></h3>
+                            <button type="button" onclick="showSampleModal('ac')" class="px-3 py-1.5 bg-blue-50 text-primary border border-blue-100 hover:bg-primary hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-sm active:scale-95 group">
+                                <span class="material-symbols-outlined text-[14px]">library_add</span>
+                                Chọn mẫu AC Solar
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div class="input-group"><label>Hãng sản xuất / Manufacturer</label><input type="text" data-path="acCabinet.specs.manufacturer"></div>
                             <div class="input-group"><label>Model</label><input type="text" data-path="acCabinet.specs.model"></div>
@@ -978,28 +985,28 @@
                             </button>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan & chi tiết thiết bị trong tủ</p><p class="text-[11px] text-slate-500 italic">Overall & detail photo of cabinet interior</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Chụp ảnh tổng quan & chi tiết thiết bị trong tủ<p class="text-[11px] text-slate-500 italic">Overall & detail photo of cabinet interior</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra trạng thái / cơ hoạt động từng thiết bị điện</p><p class="text-[11px] text-slate-500 italic">Check status indicator of each electrical device</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra trạng thái / cơ hoạt động từng thiết bị điện<p class="text-[11px] text-slate-500 italic">Check status indicator of each electrical device</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.1.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Chụp ảnh chi tiết nếu phát hiện hoạt động bất thường</p><p class="text-[11px] text-slate-500 italic">Detail photo if abnormal operation found</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Chụp ảnh chi tiết nếu phát hiện hoạt động bất thường<p class="text-[11px] text-slate-500 italic">Detail photo if abnormal operation found</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.2.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Quét nhiệt tủ AC Solar (≤ 65°C tại điểm đấu nối)</p><p class="text-[11px] text-slate-500 italic">Thermal scan of AC cabinet (≤ 65°C at terminals)</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Quét nhiệt tủ AC Solar (≤ 65°C tại điểm đấu nối)<p class="text-[11px] text-slate-500 italic">Thermal scan of AC cabinet (≤ 65°C at terminals)</p></div>
                             <div class="flex items-center gap-2 mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.energizedCheck.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.energizedCheck.3.remarks">
@@ -1016,35 +1023,35 @@
                             </button>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.4. Kiểm tra, siết lực các đầu nối điện (MCCB, MCB, Terminal)</p><p class="text-[11px] text-slate-500 italic">Check & torque electrical terminals (MCCB, MCB, Terminal)</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra, siết lực các đầu nối điện (MCCB, MCB, Terminal)<p class="text-[11px] text-slate-500 italic">Check & torque electrical terminals (MCCB, MCB, Terminal)</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.5. Đo điện trở cách điện (Hioki IR4053-10 - ≥ 1 MΩ)</p><p class="text-[11px] text-slate-500 italic">Insulation resistance test - ≥ 1 MΩ</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Đo điện trở cách điện (Hioki IR4053-10 - ≥ 1 MΩ)<p class="text-[11px] text-slate-500 italic">Insulation resistance test - ≥ 1 MΩ</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.1.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.6. Đo điện trở nối đất (Kyoritsu 4105A - ≤ 4 Ω)</p><p class="text-[11px] text-slate-500 italic">Earth resistance test - ≤ 4 Ω</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Đo điện trở nối đất (Kyoritsu 4105A - ≤ 4 Ω)<p class="text-[11px] text-slate-500 italic">Earth resistance test - ≤ 4 Ω</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.2.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.7. Kiểm tra độ kín bụi; xịt foam các lỗ hở trên vỏ tủ</p><p class="text-[11px] text-slate-500 italic">Check dust sealing; foam-seal any openings</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra độ kín bụi; xịt foam các lỗ hở trên vỏ tủ<p class="text-[11px] text-slate-500 italic">Check dust sealing; foam-seal any openings</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.3.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">5.8. Vệ sinh bên trong tủ và lưới chắn bụi</p><p class="text-[11px] text-slate-500 italic">Clean interior and dust filter</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Vệ sinh bên trong tủ và lưới chắn bụi<p class="text-[11px] text-slate-500 italic">Clean interior and dust filter</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="acCabinet.deEnergizedCheck.4.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="acCabinet.deEnergizedCheck.4.remarks">
@@ -1082,6 +1089,7 @@
                             <div class="input-group"><label>Ngày lắp đặt / <span class="italic">Install Date</span></label><input type="text" data-path="inverter.specs.installDate"></div>
                         </div>
                     </div>
+
                     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-slate-100">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-[13px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">settings_input_component</span>Các hạng mục kiểm tra / <span class="italic text-slate-500 font-normal">Inspection items</span></h3>
@@ -1091,62 +1099,64 @@
                             </button>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra & siết lực đầu đấu nối AC của Inverter</p><p class="text-[11px] text-slate-500 italic">Check & torque AC terminal connections</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra & siết lực đầu đấu nối AC của Inverter<p class="text-[11px] text-slate-500 italic">Check & torque AC terminal connections</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.0.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.0.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra đầu kết nối MC4 phía DC</p><p class="text-[11px] text-slate-500 italic">Check DC side MC4 connector condition</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra đầu kết nối MC4 phía DC<p class="text-[11px] text-slate-500 italic">Check DC side MC4 connector condition</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.1.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.1.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh nhãn string dây DC – kiểm tra ghi chú đúng chuẩn</p><p class="text-[11px] text-slate-500 italic">Clean DC string labels – verify labelling standard</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Vệ sinh nhãn string dây DC – kiểm tra ghi chú đúng chuẩn<p class="text-[11px] text-slate-500 italic">Clean DC string labels – verify labelling standard</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.2.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.2.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh quạt tản nhiệt (nếu có)</p><p class="text-[11px] text-slate-500 italic">Clean cooling fan (if present)</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Vệ sinh quạt tản nhiệt (nếu có)<p class="text-[11px] text-slate-500 italic">Clean cooling fan (if present)</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.3.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.3.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Vệ sinh / quét bụi toàn bộ thân Inverter</p><p class="text-[11px] text-slate-500 italic">Clean / dust inverter body</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Vệ sinh / quét bụi toàn bộ thân Inverter<p class="text-[11px] text-slate-500 italic">Clean / dust inverter body</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.4.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.4.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra log lỗi / cảnh báo trên màn hình Inverter</p><p class="text-[11px] text-slate-500 italic">Check inverter display for error logs / warnings</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra log lỗi / cảnh báo trên màn hình Inverter<p class="text-[11px] text-slate-500 italic">Check inverter display for error logs / warnings</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.5.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.5.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Kiểm tra portal / app giám sát online</p><p class="text-[11px] text-slate-500 italic">Check online monitoring portal / app</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Kiểm tra portal / app giám sát online<p class="text-[11px] text-slate-500 italic">Check online monitoring portal / app</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.6.status"><option value="" disabled selected>-- Chọn --</option><option value="OK">Đạt</option><option value="Not OK">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.6.remarks">
                             </div>
                         </div>
                         <div class="checklist-item">
-                            <div class="flex-1"><p class="text-[13px] font-semibold text-slate-800 tracking-tight">Cập nhật firmware (nếu có phiên bản mới)</p><p class="text-[11px] text-slate-500 italic">Update firmware (if new version available)</p></div>
+                            <div class="flex-1 text-sm font-semibold text-slate-800 tracking-tight">Cập nhật firmware (nếu có phiên bản mới)<p class="text-[11px] text-slate-500 italic">Update firmware (if new version available)</p></div>
                             <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 <select class="w-28 text-sm" data-path="inverter.checklist.7.status"><option value="" disabled selected>-- Chọn --</option><option value="Đạt">Đạt</option><option value="Không Có">Không Có</option><option value="Không Đạt">Không Đạt</option></select>
                                 <input type="text" placeholder="Ghi chú..." class="w-40 text-sm" data-path="inverter.checklist.7.remarks">
                             </div>
                         </div>
+
                     </div>
+                </div>
                 </div>
 
                 <!-- TAB 7, 8, 9: Shortened checklists for these -->

@@ -120,10 +120,7 @@ class PuppeteerReportService extends IReportService {
             
             .tool-img { max-height: 85px; max-width: 140px; display: block; margin: 0 auto; }
             
-            .thermal-container { display: flex; gap: 10px; margin: 10px 0; height: 250px; }
-            .img-box { flex: 1; border: 1px solid #ccc; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #eee; }
-            .img-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-            
+            .thermal-block { margin-bottom: 12px; page-break-inside: avoid; }
             .marker-text { position: absolute; transform: translate(-50%, -50%); padding: 1px 3px; border-radius: 2px; font-size: 6.5pt; font-weight: bold; color: white; border: 1px solid white; box-shadow: 0px 0px 2px rgba(0,0,0,0.8); z-index: 10; font-family: 'Segoe UI', Arial, sans-serif; pointer-events: none;}
             .marker-hot { background-color: #ef4444; }
             .marker-cold { background-color: #3b82f6; }
@@ -146,7 +143,7 @@ class PuppeteerReportService extends IReportService {
                 <tr><td class="info-label">Địa chỉ dự án<br/><span class="info-sublabel">Inspection location:</span></td><td class="info-value">${omData.projectInfo.location}</td></tr>
                 <tr><td class="info-label">Đơn vị thực hiện<br/><span class="info-sublabel">Inspection company:</span></td><td class="info-value">${omData.projectInfo.inspectionCompany}</td></tr>
                 <tr><td class="info-label">Ngày thực hiện<br/><span class="info-sublabel">Date of inspection:</span></td><td class="info-value">${omData.projectInfo.inspectionDate}</td></tr>
-                <tr><td class="info-label">Công suất lắp đặt<br/><span class="info-sublabel">Installed capacity:</span></td><td class="info-value">${omData.projectInfo.capacity}</td></tr>
+                <tr><td class="info-label">Công suất lắp đặt<br/><span class="info-sublabel">Installed capacity:</span></td><td class="info-value">${omData.projectInfo.capacity ? omData.projectInfo.capacity + ' kWp' : ''}</td></tr>
                 <tr><td class="info-label">Ngày vận hành/COD<br/><span class="info-sublabel">COD Date:</span></td><td class="info-value">${omData.projectInfo.codDate || ''}</td></tr>
                 <tr><td class="info-label">Lần kiểm tra<br/><span class="info-sublabel">Inspection no.:</span></td><td class="info-value">${omData.projectInfo.inspectionNo}</td></tr>
                 <tr><td class="info-label">Kỹ thuật viên<br/><span class="info-sublabel">Technician:</span></td><td class="info-value">${omData.projectInfo.technicians}</td></tr>
@@ -315,25 +312,7 @@ class PuppeteerReportService extends IReportService {
                         <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
                         <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
                     </tr>
-                    ${(omData.acCabinet.energizedCheck || []).map(c => `
-                        <tr>
-                            <td>${c.item.replace(/\n/g, '<br/>')}</td>
-                            <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
-                            <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
-                            <td>${c.remarks || ''}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                
-                <div class="font-bold" style="margin-top: 10px; margin-bottom: 5px;">Kiểm tra khi không có điện <span class="italic">(De-energized inspection)</span></div>
-                <table>
-                    <tr>
-                        <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
-                        <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
-                        <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
-                        <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
-                    </tr>
-                    ${(omData.acCabinet.deEnergizedCheck || []).map(c => `
+                    ${(omData.acCabinet.energizedCheck || []).map((c, i) => `
                         <tr>
                             <td>${c.item.replace(/\n/g, '<br/>')}</td>
                             <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
@@ -350,7 +329,25 @@ class PuppeteerReportService extends IReportService {
         html += `<div class="report-page">
             ${this._renderHeader(logoBase64)}
             ${this._renderWatermark(logoBase64)}
-            <div class="section-header">6. Biến tần / Inverter</div>
+            <div class="font-bold" style="margin-top: 5px; margin-bottom: 5px;">Kiểm tra khi không có điện <span class="italic">(De-energized inspection)</span></div>
+            <table>
+                <tr>
+                    <th style="width: 45%;">Hạng mục / <span class="italic">Inspection item</span></th>
+                    <th style="width: 12%;">Đạt <br/><span class="italic">(OK)</span></th>
+                    <th style="width: 12%;">Không đạt <br/><span class="italic">(Not Ok)</span></th>
+                    <th style="width: 31%;">Ghi chú / <span class="italic">Remarks</span></th>
+                </tr>
+                ${(omData.acCabinet.deEnergizedCheck || []).map((c, i) => `
+                    <tr>
+                        <td>${c.item.replace(/\n/g, '<br/>')}</td>
+                        <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
+                        <td class="text-center">${this._renderCheck(c.status !== 'OK' && c.status !== 'Đạt')}</td>
+                        <td>${c.remarks || ''}</td>
+                    </tr>
+                `).join('')}
+            </table>
+
+            <div class="section-header" style="margin-top: 20px;">6. Biến tần / Inverter</div>
             <div class="section-title">Thông số kỹ thuật / <span class="italic">Specifications</span></div>
             <table>
                 <tr>
@@ -372,8 +369,8 @@ class PuppeteerReportService extends IReportService {
                     <td>${omData.inverter.specs.installDate}</td>
                 </tr>
             </table>
-            
-            <div class="section-title">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
+
+            <div class="section-title" style="margin-top: 20px;">Hạng mục kiểm tra / <span class="italic">Inspection Items</span></div>
             <table>
                 <thead>
                     <tr>
@@ -383,7 +380,7 @@ class PuppeteerReportService extends IReportService {
                         <th style="width: 15%;">Ghi chú / <span class="italic">Remarks</span></th>
                     </tr>
                 </thead>
-                ${omData.inverter.checklist.map(c => `
+                ${omData.inverter.checklist.map((c, i) => `
                     <tr>
                         <td>${c.item.replace(/\n/g, '<br/>')}</td>
                         <td class="text-center">${this._renderCheck(c.status === 'OK' || c.status === 'Đạt')}</td>
@@ -643,20 +640,20 @@ class PuppeteerReportService extends IReportService {
                     };
 
                     html += `
-                    <div class="thermal-block" style="margin-bottom: 20px; page-break-inside: avoid;">
-                        <table style="width: 100%; font-size: 8pt; font-weight: bold; margin-bottom: 6px; border: none;">
+                    <div class="thermal-block">
+                        <table style="width: 100%; font-size: 7.5pt; font-weight: bold; margin-bottom: 4px; border: none;">
                             <tr>
-                                <td style="width: 15%; border: none; padding: 2px;">File:</td><td style="width: 35%; border: none; padding: 2px;">${item.filename}.BMT</td>
-                                <td style="width: 15%; border: none; padding: 2px;">Date:</td><td style="width: 35%; text-align: right; border: none; padding: 2px;">${item.date || '2026-01-11'}</td>
+                                <td style="width: 15%; border: none; padding: 1px;">File:</td><td style="width: 35%; border: none; padding: 1px;">${item.filename}.BMT</td>
+                                <td style="width: 15%; border: none; padding: 1px;">Date:</td><td style="width: 35%; text-align: right; border: none; padding: 1px;">${item.date || '2026-01-11'}</td>
                             </tr>
                             <tr>
-                                <td style="border: none; padding: 2px;">Lens type:</td><td style="border: none; padding: 2px;">${item.lensType || '35° x 26°'}</td>
-                                <td style="border: none; padding: 2px;">Time:</td><td style="text-align: right; border: none; padding: 2px;">${item.time || '12:00:00 PM'}</td>
+                                <td style="border: none; padding: 1px;">Lens type:</td><td style="border: none; padding: 1px;">${item.lensType || '35° x 26°'}</td>
+                                <td style="border: none; padding: 1px;">Time:</td><td style="text-align: right; border: none; padding: 1px;">${item.time || '12:00:00 PM'}</td>
                             </tr>
                         </table>
 
-                        <div style="display: flex; margin-bottom: 8px; justify-content: space-between; align-items: stretch;">
-                            <div style="width: 290px; border: 1px solid #777; aspect-ratio: 4/3; background: #fff; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div style="display: flex; margin-bottom: 6px; justify-content: space-between; align-items: stretch;">
+                            <div style="width: 275px; border: 1px solid #777; height: 180px; background: #fff; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                                 ${thermalImg ? `<img src="data:image/jpeg;base64,${thermalImg}" style="width: 100%; height: 100%; object-fit: cover;" />
                                 ${item.spots ? `
                                     <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; pointer-events: none;">
@@ -667,13 +664,13 @@ class PuppeteerReportService extends IReportService {
                                 ` : ''}` : '<span style="color: #666; font-size: 8pt;">No Image</span>'}
                             </div>
 
-                            <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: center; width: 45px; padding: 2px 0;">
-                                <span style="font-size: 7.5pt; font-weight: bold; font-family: 'Segoe UI', sans-serif;">${item.maxTemp}°C</span>
-                                <div style="flex: 1; width: 14px; background: linear-gradient(to bottom, #fff3b0, #ff9800, #f44336, #9c27b0, #3f51b5, #000000); border: 1px solid #555; margin: 4px 0; border-radius: 2px;"></div>
-                                <span style="font-size: 7.5pt; font-weight: bold; font-family: 'Segoe UI', sans-serif;">${item.minTemp}°C</span>
+                            <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: center; width: 40px; padding: 1px 0;">
+                                <span style="font-size: 7pt; font-weight: bold; font-family: 'Segoe UI', sans-serif;">${item.maxTemp}°C</span>
+                                <div style="flex: 1; width: 12px; background: linear-gradient(to bottom, #fff3b0, #ff9800, #f44336, #9c27b0, #3f51b5, #000000); border: 1px solid #555; margin: 2px 0; border-radius: 2px;"></div>
+                                <span style="font-size: 7pt; font-weight: bold; font-family: 'Segoe UI', sans-serif;">${item.minTemp}°C</span>
                             </div>
 
-                            <div style="width: 290px; border: 1px solid #777; aspect-ratio: 4/3; background: #fff; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 275px; border: 1px solid #777; height: 180px; background: #fff; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                                 ${realImg ? `<img src="data:image/jpeg;base64,${realImg}" style="width: 100%; height: 100%; object-fit: cover;" />` : '<span style="color: #666; font-size: 8pt;">No Image</span>'}
                             </div>
                         </div>
