@@ -34,7 +34,14 @@ class PuppeteerReportService extends IReportService {
             const launchOptions = {
                 headless: "new",
                 timeout: 60000,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                args: [
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-zygote',
+                    '--single-process'
+                ]
             };
             if (process.versions.electron) {
                 const exePath = path.join(process.resourcesPath, 'chromium', 'chrome.exe');
@@ -591,7 +598,7 @@ class PuppeteerReportService extends IReportService {
 
         html += `</body></html>`;
 
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 90000 });
+        await page.setContent(html, { waitUntil: 'networkidle2', timeout: 60000 });
         await page.pdf({ path: outputPath, format: 'A4', printBackground: true });
         await browser.close();
         return outputPath;
