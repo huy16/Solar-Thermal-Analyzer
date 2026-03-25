@@ -668,22 +668,20 @@ function renderDynamicThermalGrid(category, containerId) {
     if (files.length === 0) {
         container.classList.add('grid-cols-1');
         container.innerHTML = `
-            <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm italic">
+            <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm italic col-span-full">
                 Chưa có ảnh nào được chọn.
             </div>
         `;
         return;
     }
 
-    // Assign grid columns based on file count
-    if (files.length === 1) container.classList.add('grid-cols-1');
-    else if (files.length === 2) container.classList.add('grid-cols-2');
-    else if (files.length === 3) container.classList.add('grid-cols-3');
-    else container.classList.add('grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4'); // Responsive
+    // Always use a consistent grid layout regardless of file count
+    // This ensures images are not "too large" when few are present.
+    container.classList.add('grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4');
 
     files.forEach((file, index) => {
         const itemBox = document.createElement('div');
-        itemBox.className = 'thermal-item-box relative border border-slate-200 rounded-xl overflow-hidden group shadow-sm bg-slate-50 flex items-center justify-center min-h-[120px]';
+        itemBox.className = 'thermal-item-box relative border border-slate-200 rounded-xl overflow-hidden group shadow-sm bg-slate-50 flex items-center justify-center min-h-[120px] max-h-[400px]';
 
         // Check if it's an image we can preview
         const isImage = file.type.startsWith('image/');
