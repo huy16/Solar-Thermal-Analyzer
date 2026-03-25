@@ -124,7 +124,7 @@ class PuppeteerReportService extends IReportService {
                 padding-top: 3px; 
             }
             
-            .tool-img { max-height: 85px; max-width: 140px; display: block; margin: 0 auto; }
+            .tool-img { max-height: 75px; max-width: 140px; display: block; margin: 0 auto; }
             
             .thermal-block { margin-bottom: 12px; page-break-inside: avoid; }
             .marker-text { position: absolute; transform: translate(-50%, -50%); padding: 1px 3px; border-radius: 2px; font-size: 6.5pt; font-weight: bold; color: white; border: 1px solid white; box-shadow: 0px 0px 2px rgba(0,0,0,0.8); z-index: 10; font-family: 'Segoe UI', Arial, sans-serif; pointer-events: none;}
@@ -139,7 +139,7 @@ class PuppeteerReportService extends IReportService {
         html += `<div class="report-page">
             ${this._renderHeader(logoBase64)}
             ${this._renderWatermark(logoBase64)}
-            <div class="title-main">${reportTitle}</div>
+            <div class="title-main">${(reportTitle || '').replace(/\n/g, '<br/>')}</div>
             <div class="title-sub">Solar Rooftop System – Inspection, Maintenance & Overhaul Report</div>
             
             <div class="section-header">1. Thông tin / Information</div>
@@ -891,7 +891,7 @@ class PuppeteerReportService extends IReportService {
     }
 
     _renderFooter(pageNum, totalPages) {
-        return `<div class="footer">CAS Energy Solutions – Báo cáo kiểm tra bảo trì | Trang ${pageNum}/${totalPages}</div>`;
+        return `<div class="footer">Báo cáo kiểm tra bảo trì | Trang ${pageNum}/${totalPages}</div>`;
     }
 
     _renderToolPhoto(photoPath) {
